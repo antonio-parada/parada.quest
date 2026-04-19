@@ -8,7 +8,7 @@ import './App.css'
 const TOXIC_PHRASES = [
   "You'd be prettier if you smiled.", "I'm actually a really nice guy.", "Do you know who I am?",
   "I can help your career.", "Don't be like that, babe.", "I'm just giving you a compliment.",
-  "You're making a scene.", "I'm the one paying for this.", "You're lucky I'm talking to you."
+  "You're making a scene.", "I'm the one paying for this.", "You're lucky I'm even talking to you."
 ];
 
 const DIVINE_WISDOM = [
@@ -26,6 +26,18 @@ const keyboardMap = [
   { name: "attack", keys: ["k", "K", "Enter"] },
 ];
 
+function WorldNode({ position, label, color, scale = [1,1,1] }: any) {
+    return (
+      <RigidBody type="fixed" position={position}>
+        <mesh castShadow scale={scale}>
+          <boxGeometry args={[10, 15, 10]} />
+          <meshStandardMaterial color="#0a0a0a" />
+        </mesh>
+        <Text position={[0, 9 * scale[1], 0]} fontSize={1} color={color}>{label}</Text>
+      </RigidBody>
+    );
+}
+
 function Muse({ position, onWisdom }: any) {
   return (
     <group position={position}>
@@ -34,9 +46,7 @@ function Muse({ position, onWisdom }: any) {
           <torusKnotGeometry args={[1, 0.3, 100, 16]} />
           <meshStandardMaterial color="#ffd700" emissive="#ffd700" emissiveIntensity={2} transparent opacity={0.8} />
         </mesh>
-        <Billboard position={[0, 2.5, 0]}>
-           <Text fontSize={0.4} color="#ffd700">DIVINE_FEMININE_WISDOM</Text>
-        </Billboard>
+        <Billboard position={[0, 2.5, 0]}><Text fontSize={0.4} color="#ffd700">DIVINE_WISDOM</Text></Billboard>
         <RigidBody type="fixed" sensor onIntersectionEnter={onWisdom}>
            <mesh visible={false}><sphereGeometry args={[3]} /></mesh>
         </RigidBody>
@@ -51,7 +61,6 @@ function Dojo({ position }: any) {
         <RigidBody type="fixed">
           <mesh castShadow><boxGeometry args={[20, 1, 20]} /><meshStandardMaterial color="#050505" /></mesh>
         </RigidBody>
-        {/* DOJO BARRIER: Purely visual for the player, but we will logic-block the mobs in Scene */}
         <mesh position={[0, 4, 0]}>
           <boxGeometry args={[19.5, 8, 19.5]} />
           <meshStandardMaterial color="#00ff00" transparent opacity={0.05} wireframe />
@@ -132,8 +141,6 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput, pp }: any) 
         <group ref={rightArm} position={[-0.45, 0.6, 0]}><mesh position={[0, -0.3, 0]} castShadow><boxGeometry args={[0.2, 0.6, 0.2]} /><meshStandardMaterial color="#fff" /></mesh></group>
         <group ref={leftLeg} position={[0.2, -0.2, 0]}><mesh position={[0, -0.3, 0]} castShadow><boxGeometry args={[0.25, 0.6, 0.25]} /><meshStandardMaterial color="#fff" /></mesh></group>
         <group ref={rightLeg} position={[-0.2, -0.2, 0]}><mesh position={[0, -0.3, 0]} castShadow><boxGeometry args={[0.25, 0.6, 0.25]} /><meshStandardMaterial color="#fff" /></mesh></group>
-        
-        {/* PINK HANDSHAKE STRIKE - VISUAL INDICATOR */}
         {isAttacking && (
            <group>
              <mesh position={[0, 0, (kickRange + 0.5) / 2]}>
@@ -160,15 +167,12 @@ function ToxicVessel({ data, onHeal, playerPosRef, registerHeal }: any) {
      const pos = vesselRef.current.translation();
      const pPos = playerPosRef.current;
      const direction = new THREE.Vector3(pPos.x - pos.x, 0, pPos.z - pos.z);
-     
-     // SAFE ZONE BLOCKING: Mobs cannot enter Dojo radius
      const distFromOrigin = new THREE.Vector2(pos.x, pos.z).length();
      if (distFromOrigin < 12) {
-        const pushAway = new THREE.Vector3(pos.x, 0, pos.z).normalize().multiplyScalar(5);
+        const pushAway = new THREE.Vector3(pos.x, 0, pos.z).normalize().multiplyScalar(6);
         vesselRef.current.setLinvel({ x: pushAway.x, y: 0, z: pushAway.z }, true);
         return;
      }
-
      if (direction.lengthSq() > 2) { 
         const followSpeed = data.type === 'HEAVY' ? 0.8 : 2.5;
         direction.normalize().multiplyScalar(followSpeed);
@@ -179,28 +183,26 @@ function ToxicVessel({ data, onHeal, playerPosRef, registerHeal }: any) {
   const triggerHeal = () => {
      if (isHealed) return;
      setIsHealed(true);
+     vesselRef.current.applyImpulse({ x: (Math.random() - 0.5) * 50, y: 100, z: (Math.random() - 0.5) * 50 }, true);
      onHeal();
   };
 
-  // Register the heal trigger so the scene can call it
-  useEffect(() => {
-     registerHeal(data.id, triggerHeal);
-  }, []);
+  useEffect(() => { registerHeal(data.id, triggerHeal); }, []);
 
   return (
-    <RigidBody ref={vesselRef} position={data.position} colliders="cuboid" lockRotations mass={isHealed ? 1000 : 4} type={isHealed ? "fixed" : "dynamic"}>
+    <RigidBody ref={vesselRef} position={data.position} colliders="cuboid" lockRotations mass={isHealed ? 1 : 4}>
       {!isHealed ? (
         <group>
-          <mesh position={[0, 0.4, 0]} castShadow><boxGeometry args={[0.7, 1.2, 0.5]} /><meshStandardMaterial color={data.type === 'HEAVY' ? "#300" : "#111"} /></mesh>
+          <mesh position={[0, 0.4, 0]} castShadow><boxGeometry args={[data.type === 'HEAVY' ? 1 : 0.7, 1.2, 0.5]} /><meshStandardMaterial color={data.type === 'HEAVY' ? "#300" : "#111"} /></mesh>
           <mesh position={[0, 1.1, 0]} castShadow><boxGeometry args={[0.5, 0.5, 0.5]} /><meshStandardMaterial color="#222" /></mesh>
           <Billboard position={[0, 2.4, 0]}><Text fontSize={0.2} color="#fff" maxWidth={2.5} textAlign="center">{data.message}</Text></Billboard>
         </group>
       ) : (
         <group>
            <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
-              <mesh position={[0, 0.5, 0]}><cylinderGeometry args={[0.05, 0.05, 1]} /><meshStandardMaterial color="#00ff00" /></mesh>
-              <mesh position={[0, 1, 0]}><sphereGeometry args={[0.4, 16, 16]} /><meshStandardMaterial color="#ff00ff" emissive="#ff00ff" emissiveIntensity={2} /></mesh>
-              <Billboard position={[0, 1.8, 0]}><Text fontSize={0.25} color="#00ff00">AFFIRMED</Text></Billboard>
+              <mesh position={[0, 0.5, 0]}><cylinderGeometry args={[0.02, 0.02, 1.5]} /><meshStandardMaterial color="#00ff00" /></mesh>
+              <mesh position={[0, 1.2, 0]}><sphereGeometry args={[0.15, 12, 12]} /><meshStandardMaterial color="#ff00ff" emissive="#ff00ff" emissiveIntensity={5} /></mesh>
+              <Billboard position={[0, 1.8, 0]}><Text fontSize={0.2} color="#00ff00">SIGNAL_HEALED</Text></Billboard>
            </Float>
         </group>
       )}
@@ -210,26 +212,21 @@ function ToxicVessel({ data, onHeal, playerPosRef, registerHeal }: any) {
 
 function Scene({ mobileInput, setScore, setPP, pp }: any) {
   const [kickRange, setKickRange] = useState(1.5);
-  const [affirmation, setAffirmation] = useState("Breathe.");
+  const [affirmation, setAffirmation] = useState("Establishing peace.");
   const vessels = useRef(Array.from({length: 30}).map((_, i) => ({
     id: i, type: Math.random() > 0.8 ? 'HEAVY' : 'NORMAL',
     position: [(Math.random() - 0.5) * 600, 2, (Math.random() - 0.5) * 600] as [number, number, number],
     message: TOXIC_PHRASES[Math.floor(Math.random() * TOXIC_PHRASES.length)],
   })));
-  
   const healMap = useRef<any>(new Map());
   const playerPosRef = useRef(new THREE.Vector3());
   const orbitRef = useRef<any>(null);
 
   const handleAttack = (playerPos: any) => {
      setAffirmation("HANDSHAKE_ACTIVE");
-     
-     // AUTHORITATIVE HIT DETECTION
      vessels.current.forEach((v) => {
         const vPos = new THREE.Vector3(...v.position);
-        // We need real-time position from physics, but distance check is a good indicator
-        const dist = playerPos.distanceTo(vPos);
-        if (dist < kickRange + 3) {
+        if (playerPos.distanceTo(vPos) < kickRange + 3) {
             const trigger = healMap.current.get(v.id);
             if (trigger) trigger();
         }
@@ -239,12 +236,9 @@ function Scene({ mobileInput, setScore, setPP, pp }: any) {
   useFrame((_, delta) => {
     if (!playerPosRef.current) return;
     const pPos = playerPosRef.current;
-    
-    // PP DEPLETION Logic (Calculated in Scene for central authority)
-    const inDojo = pPos.distanceTo(new THREE.Vector3(0, 0, 0)) < 10;
-    const regen = inDojo ? 15 * delta : 0;
+    const inDojo = pPos.distanceTo(new THREE.Vector3(0, 0, 0)) < 12;
+    const regen = inDojo ? 20 * delta : 0;
     setPP((prev: number) => Math.min(100, prev + regen));
-
     if (orbitRef.current) orbitRef.current.target.lerp(pPos.clone().add(new THREE.Vector3(0, 1.5, 0)), 0.1);
   });
 
@@ -254,23 +248,17 @@ function Scene({ mobileInput, setScore, setPP, pp }: any) {
       <directionalLight position={[100, 100, 50]} castShadow intensity={2} />
       <Physics gravity={[0, -45, 0]}>
         <KarateMan onAttack={handleAttack} playerPosRef={playerPosRef} kickRange={kickRange} mobileInput={mobileInput} pp={pp} />
-        
         {vessels.current.map((v) => (
-          <ToxicVessel 
-            key={v.id} data={v} playerPosRef={playerPosRef} 
-            registerHeal={(id: any, fn: any) => healMap.current.set(id, fn)}
-            onHeal={() => {
-                setScore((s:any) => s + 1);
-                setPP((prev: any) => Math.min(100, prev + 15));
-            }} 
-          />
+          <ToxicVessel key={v.id} data={v} playerPosRef={playerPosRef} registerHeal={(id: any, fn: any) => healMap.current.set(id, fn)} onHeal={() => { setScore((s:any) => s + 1); setPP((prev: any) => Math.min(100, prev + 15)); }} />
         ))}
         <Dojo position={[0, -0.5, 0]} />
         <Muse position={[40, 2, 40]} onWisdom={() => {
-            setKickRange(prev => prev + 0.15);
+            setKickRange(prev => prev + 1.0);
             setAffirmation(DIVINE_WISDOM[Math.floor(Math.random() * DIVINE_WISDOM.length)]);
             setPP(100);
         }} />
+        <WorldNode position={[120, 0, -120]} label="GASLIGHT_BANK" color="#ffd700" />
+        <WorldNode position={[-150, 0, 100]} label="ALPHA_GYM" color="#ff0000" />
         <RigidBody type="fixed" position={[0, -1, 0]}>
           <mesh receiveShadow><boxGeometry args={[4000, 2, 4000]} /><meshStandardMaterial color="#050505" /></mesh>
           <gridHelper args={[4000, 400, "#ff00ff", "#111"]} position={[0, 1.01, 0]} />
@@ -278,9 +266,7 @@ function Scene({ mobileInput, setScore, setPP, pp }: any) {
       </Physics>
       <OrbitControls ref={orbitRef} enablePan={false} enableZoom={true} maxPolarAngle={Math.PI / 2.2} minDistance={8} maxDistance={40} makeDefault />
       <Html fullscreen zIndexRange={[100, 0]}>
-         <div className="ui-overlay" style={{ pointerEvents: 'none' }}>
-           <p style={{color: 'var(--pixels-green)', fontSize: '14px'}}>{affirmation.toUpperCase()}</p>
-         </div>
+         <div className="ui-overlay" style={{ pointerEvents: 'none' }}><p style={{color: 'var(--pixels-green)', fontSize: '14px'}}>{affirmation.toUpperCase()}</p></div>
       </Html>
     </>
   );

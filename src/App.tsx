@@ -50,8 +50,6 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput }: any) {
   useFrame((state) => {
     if (!bodyRef.current) return;
     const keys = getKeys();
-    
-    // 1. INPUT UNIFICATION
     const moveX = (keys.right ? 1 : 0) - (keys.left ? 1 : 0) + mobileInput.current.x;
     const moveZ = (keys.backward ? 1 : 0) - (keys.forward ? 1 : 0) + mobileInput.current.y;
     const jumpInput = keys.jump || mobileInput.current.jump;
@@ -67,21 +65,20 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput }: any) {
        setTimeout(() => setIsAttacking(false), 250); 
     }
 
-    // 2. CAMERA-RELATIVE MOVEMENT
     const cameraRotation = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
     cameraRotation.x = 0; cameraRotation.z = 0;
 
-    const direction = new THREE.Vector3(moveX, 0, moveZ);
-    if (direction.lengthSq() > 0.01) {
-      direction.normalize().applyEuler(cameraRotation).multiplyScalar(12);
-      const angle = Math.atan2(direction.x, direction.z);
+    const moveDirection = new THREE.Vector3(moveX, 0, moveZ);
+    if (moveDirection.lengthSq() > 0.01) {
+      moveDirection.normalize().applyEuler(cameraRotation).multiplyScalar(12);
+      const angle = Math.atan2(moveDirection.x, moveDirection.z);
       groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, angle, 0.2);
     }
     
     bodyRef.current.setLinvel({ 
-        x: THREE.MathUtils.lerp(linvel.x, direction.x, 0.3), 
+        x: THREE.MathUtils.lerp(linvel.x, moveDirection.x, 0.3), 
         y: linvel.y, 
-        z: THREE.MathUtils.lerp(linvel.z, direction.z, 0.3) 
+        z: THREE.MathUtils.lerp(linvel.z, moveDirection.z, 0.3) 
     }, true);
 
     if (jumpInput && Math.abs(linvel.y) < 0.1 && pos.y < 1.5) {
@@ -89,7 +86,7 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput }: any) {
     }
 
     const t = state.clock.elapsedTime;
-    if (direction.lengthSq() > 0.1) {
+    if (moveDirection.lengthSq() > 0.1) {
       leftArm.current.rotation.x = Math.sin(t * 15) * 0.8;
       rightArm.current.rotation.x = Math.sin(t * 15 + Math.PI) * 0.8;
       leftLeg.current.rotation.x = Math.sin(t * 15 + Math.PI) * 0.6;
@@ -107,7 +104,6 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput }: any) {
           <mesh position={[0, -0.15, 0.02]} castShadow><boxGeometry args={[0.5, 0.4, 0.5]} /><meshStandardMaterial color="#fdd" /></mesh>
           <mesh position={[0.12, -0.1, 0.26]}><boxGeometry args={[0.07, 0.04, 0.05]} /><meshStandardMaterial color="#000" /></mesh>
           <mesh position={[-0.12, -0.1, 0.26]}><boxGeometry args={[0.07, 0.04, 0.05]} /><meshStandardMaterial color="#000" /></mesh>
-          <mesh position={[0, -0.3, 0.1]}><boxGeometry args={[0.3, 0.1, 0.2]} /><meshStandardMaterial color="#fcc" /></mesh>
         </group>
         <group ref={leftArm} position={[0.45, 0.6, 0]}><mesh position={[0, -0.3, 0]} castShadow><boxGeometry args={[0.2, 0.6, 0.2]} /><meshStandardMaterial color="#fff" /></mesh></group>
         <group ref={rightArm} position={[-0.45, 0.6, 0]}><mesh position={[0, -0.3, 0]} castShadow><boxGeometry args={[0.2, 0.6, 0.2]} /><meshStandardMaterial color="#fff" /></mesh></group>
@@ -118,10 +114,6 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput }: any) {
              <mesh position={[0, 0, (kickRange + 0.5) / 2]}>
                <boxGeometry args={[0.15, 0.15, kickRange]} />
                <meshStandardMaterial color="#ff00ff" emissive="#ff00ff" emissiveIntensity={20} transparent opacity={0.8} />
-             </mesh>
-             <mesh position={[0, 0, 0]} rotation={[Math.PI/2, 0, 0]}>
-                <ringGeometry args={[0.5, kickRange, 32]} />
-                <meshStandardMaterial color="#ff00ff" transparent opacity={0.2} />
              </mesh>
            </group>
         )}
@@ -149,44 +141,30 @@ function EmotionalVessel({ data, creepRef, playerPosRef }: any) {
       <group ref={modelRef}>
         <mesh position={[0, 0.4, 0]} castShadow><boxGeometry args={[0.7, 1.2, 0.5]} /><meshStandardMaterial color="#111" /></mesh>
         <mesh position={[0, 1.1, 0]} castShadow><boxGeometry args={[0.5, 0.5, 0.5]} /><meshStandardMaterial color="#222" /></mesh>
-        <Billboard position={[0, 2.2, 0]}>
-            <Text fontSize={0.2} color="#fff" maxWidth={2} textAlign="center">{data.message}</Text>
-        </Billboard>
+        <Billboard position={[0, 2.2, 0]}><Text fontSize={0.2} color="#fff" maxWidth={2} textAlign="center">{data.message}</Text></Billboard>
       </group>
     </RigidBody>
   );
 }
 
 function CameraRig({ playerPosRef, isMobile }: any) {
-  const { camera } = useThree();
-  const camSmooth = useRef(new THREE.Vector3(0, 15, 25));
+  const orbitRef = useRef<any>(null);
   const lookSmooth = useRef(new THREE.Vector3(0, 0, 0));
 
   useFrame(() => {
-    if (!playerPosRef.current) return;
+    if (!playerPosRef.current || !orbitRef.current) return;
     const pPos = playerPosRef.current;
-    
-    if (isMobile) {
-      // MOBILE: Authoritative Follow
-      const idealOffset = new THREE.Vector3(0, 5, 10);
-      const idealLook = pPos.clone().add(new THREE.Vector3(0, 1, 0));
-      camera.position.lerp(pPos.clone().add(idealOffset), 0.05);
-      lookSmooth.current.lerp(idealLook, 0.1);
-      camera.lookAt(lookSmooth.current);
-    } else {
-      // DESKTOP: Rig Follows Player, Mouse controls rotation
-      camSmooth.current.lerp(pPos.clone().add(new THREE.Vector3(0, 5, 10)), 0.1);
-      // We don't overwrite camera position here because PointerLockControls does that
-      // But we can nudge the camera to stay within a range of the player
-    }
+    lookSmooth.current.lerp(pPos.clone().add(new THREE.Vector3(0, 1.5, 0)), 0.1);
+    orbitRef.current.target.copy(lookSmooth.current);
+    orbitRef.current.update();
   });
 
   return (
     <>
       {isMobile ? (
-        <OrbitControls enablePan={false} enableZoom={true} maxPolarAngle={Math.PI / 2.2} makeDefault />
+        <OrbitControls ref={orbitRef} enablePan={false} enableZoom={true} maxPolarAngle={Math.PI / 2.2} minDistance={10} maxDistance={40} makeDefault />
       ) : (
-        <PointerLockControls makeDefault />
+        <PointerLockControls />
       )}
     </>
   );
@@ -211,7 +189,7 @@ function Scene({ mobileInput, setScore, isMobile }: any) {
         const enemyPos = ref.translation();
         const dist = new THREE.Vector3().subVectors(enemyPos, playerPos).length();
         if (dist < kickRange + 3.0) {
-          ref.applyImpulse(new THREE.Vector3().subVectors(enemyPos, playerPos).normalize().multiplyScalar(180).add(new THREE.Vector3(0, 100, 0)), true);
+          ref.applyImpulse(new THREE.Vector3().subVectors(enemyPos, playerPos).normalize().multiplyScalar(180).add(new THREE.Vector3(0, 80, 0)), true);
           setScore((s: number) => s + 1);
           setAffirmation(THERAPY_AFFIRMATIONS[Math.floor(Math.random() * THERAPY_AFFIRMATIONS.length)]);
         }
@@ -223,7 +201,6 @@ function Scene({ mobileInput, setScore, isMobile }: any) {
     <>
       <ambientLight intensity={0.4} />
       <directionalLight position={[100, 100, 50]} castShadow intensity={2} />
-      
       <Physics gravity={[0, -45, 0]}>
         <KarateMan onAttack={handleAttack} playerPosRef={playerPosRef} kickRange={kickRange} mobileInput={mobileInput} />
         {vessels.current.map((v) => (
@@ -275,8 +252,8 @@ function App() {
   const handleJoystick = (e: any) => {
       if (!joystickRef.current) return;
       const rect = joystickRef.current.getBoundingClientRect();
-      const clientX = e.clientX || e.touches?.[0]?.clientX;
-      const clientY = e.clientY || e.touches?.[0]?.clientY;
+      const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+      const clientY = e.clientY || (e.touches && e.touches[0].clientY);
       const x = (clientX - (rect.left + rect.width / 2)) / (rect.width / 2);
       const y = (clientY - (rect.top + rect.height / 2)) / (rect.height / 2);
       mobileInput.current.x = Math.max(-1, Math.min(1, x));

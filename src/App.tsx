@@ -168,7 +168,9 @@ function EmotionalVessel({ data, creepRef, playerPosRef }: any) {
       <group ref={modelRef}>
         <mesh position={[0, 0.4, 0]} castShadow><boxGeometry args={[0.7, 1.2, 0.5]} /><meshStandardMaterial color="#111" /></mesh>
         <mesh position={[0, 1.1, 0]} castShadow><boxGeometry args={[0.5, 0.5, 0.5]} /><meshStandardMaterial color="#222" /></mesh>
-        <Billboard position={[0, 2.2, 0]}><Text fontSize={0.2} color="#fff" maxWidth={2} textAlign="center">{data.message}</Text></Billboard>
+        <Billboard position={[0, 2.2, 0]}>
+            <Text fontSize={0.2} color="#fff" maxWidth={2} textAlign="center">{data.message}</Text>
+        </Billboard>
       </group>
     </RigidBody>
   );
@@ -187,7 +189,7 @@ function Scene({ mobileInput, setProtocol, setScore, isMobile }: any) {
   })));
   const creepRefs = useRef(new Map());
   const playerPosRef = useRef(new THREE.Vector3());
-  const controlsRef = useRef<any>(null);
+  const orbitRef = useRef<any>(null);
   const lookSmooth = useRef(new THREE.Vector3(0, 0, 0));
 
   const handleAttack = (playerPos: any) => {
@@ -222,14 +224,14 @@ function Scene({ mobileInput, setProtocol, setScore, isMobile }: any) {
       lookSmooth.current.lerp(focusTarget, 0.1);
 
       if (isMobile) {
-        // AUTOMATIC CAMERA POSITION FOR MOBILE
-        const idealOffset = new THREE.Vector3(0, 15, 25);
+        // AUTOMATIC FOLLOW FOR MOBILE
+        const idealOffset = new THREE.Vector3(0, 20, 30);
         state.camera.position.lerp(pPos.clone().add(idealOffset), 0.05);
         state.camera.lookAt(lookSmooth.current);
-      } else if (controlsRef.current) {
-        // UPDATE CONTROLS TARGET FOR DESKTOP POINTER LOCK
-        controlsRef.current.target.copy(lookSmooth.current);
-        controlsRef.current.update();
+      } else if (orbitRef.current) {
+        // UPDATE ORBIT TARGET FOR DESKTOP
+        orbitRef.current.target.copy(lookSmooth.current);
+        orbitRef.current.update();
       }
     }
   });
@@ -262,7 +264,12 @@ function Scene({ mobileInput, setProtocol, setScore, isMobile }: any) {
         </RigidBody>
       </Physics>
       
-      {!isMobile ? <PointerLockControls ref={controlsRef} /> : <OrbitControls enablePan={false} enableZoom={true} maxPolarAngle={Math.PI / 2.2} makeDefault />}
+      {/* MOBILE USES ORBIT, DESKTOP USES POINTER LOCK (MANUALLY MANAGED) */}
+      {isMobile ? (
+          <OrbitControls enablePan={false} enableZoom={true} maxPolarAngle={Math.PI / 2.2} makeDefault />
+      ) : (
+          <PointerLockControls />
+      )}
 
       <Html fullscreen zIndexRange={[100, 0]}>
          <div className="ui-overlay" style={{ pointerEvents: 'none' }}>
@@ -284,7 +291,6 @@ function App() {
   const resetAllInput = () => { mobileInput.current = { forward: false, backward: false, left: false, right: false, jump: false, attack: false }; };
 
   useEffect(() => {
-    // Detect mobile
     const checkMobile = () => {
         setIsMobile(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
     };
@@ -294,10 +300,7 @@ function App() {
     document.addEventListener('touchstart', prevent, { passive: false });
     window.addEventListener('pointerup', resetAllInput);
     window.addEventListener('blur', resetAllInput);
-    
-    document.addEventListener('pointerlockchange', () => {
-        setIsLocked(!!document.pointerLockElement);
-    });
+    document.addEventListener('pointerlockchange', () => setIsLocked(!!document.pointerLockElement));
 
     return () => { 
         document.removeEventListener('touchstart', prevent);
@@ -331,16 +334,16 @@ function App() {
 
       <div className="mobile-controls" onContextMenu={(e) => e.preventDefault()}>
           <div className="joystick-area">
-              <button onPointerDown={(e) => { e.stopPropagation(); updateInput('forward', true); }} className="joy-btn up">↑</button>
+              <button onPointerDown={(e) => { e.stopPropagation(); updateInput('forward', true); }} onPointerUp={(e) => { e.stopPropagation(); updateInput('forward', false); }} className="joy-btn up">↑</button>
               <div className="joy-row">
-                  <button onPointerDown={(e) => { e.stopPropagation(); updateInput('left', true); }} className="joy-btn left">←</button>
-                  <button onPointerDown={(e) => { e.stopPropagation(); updateInput('right', true); }} className="joy-btn right">→</button>
+                  <button onPointerDown={(e) => { e.stopPropagation(); updateInput('left', true); }} onPointerUp={(e) => { e.stopPropagation(); updateInput('left', false); }} className="joy-btn left">←</button>
+                  <button onPointerDown={(e) => { e.stopPropagation(); updateInput('right', true); }} onPointerUp={(e) => { e.stopPropagation(); updateInput('right', false); }} className="joy-btn right">→</button>
               </div>
-              <button onPointerDown={(e) => { e.stopPropagation(); updateInput('backward', true); }} className="joy-btn down">↓</button>
+              <button onPointerDown={(e) => { e.stopPropagation(); updateInput('backward', true); }} onPointerUp={(e) => { e.stopPropagation(); updateInput('backward', false); }} className="joy-btn down">↓</button>
           </div>
           <div className="action-area">
-              <button onPointerDown={(e) => { e.stopPropagation(); updateInput('jump', true); }} className="action-btn jump">REGULATE</button>
-              <button onPointerDown={(e) => { e.stopPropagation(); updateInput('attack', true); }} className="action-btn attack">HOLD_SPACE</button>
+              <button onPointerDown={(e) => { e.stopPropagation(); updateInput('jump', true); }} onPointerUp={(e) => { e.stopPropagation(); updateInput('jump', false); }} className="action-btn jump">REGULATE</button>
+              <button onPointerDown={(e) => { e.stopPropagation(); updateInput('attack', true); }} onPointerUp={(e) => { e.stopPropagation(); updateInput('attack', false); }} className="action-btn attack">HOLD_SPACE</button>
           </div>
       </div>
       <div className="crt-overlay"></div>

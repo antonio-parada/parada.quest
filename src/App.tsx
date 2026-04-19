@@ -99,32 +99,58 @@ function KarateMan({ onAttack, playerPosRef, kickRange }: any) {
   return (
     <RigidBody ref={bodyRef} position={[0, 2, 0]} colliders="cuboid" lockRotations mass={1}>
       <group ref={groupRef}>
+        {/* Torso */}
         <mesh position={[0, 0.3, 0]} castShadow>
           <boxGeometry args={[0.7, 0.9, 0.5]} />
           <meshStandardMaterial color="#fff" />
         </mesh>
+        {/* Black Belt */}
         <mesh position={[0, 0, 0]} castShadow>
           <boxGeometry args={[0.75, 0.15, 0.55]} />
           <meshStandardMaterial color="#000" />
         </mesh>
+
+        {/* --- HANDSOME FACE & PINK HAIR --- */}
         <group position={[0, 1, 0.05]}>
-          <mesh castShadow>
-            <boxGeometry args={[0.55, 0.45, 0.55]} />
+          <mesh castShadow> {/* Hair - Pink Buzz Cut */}
+            <boxGeometry args={[0.58, 0.48, 0.58]} />
             <meshStandardMaterial color="#ff00ff" />
           </mesh>
-          <mesh position={[0, -0.1, 0.02]} castShadow>
-            <boxGeometry args={[0.5, 0.3, 0.5]} />
+          <mesh position={[0, -0.15, 0.02]} castShadow> {/* Face / Jaw */}
+            <boxGeometry args={[0.5, 0.4, 0.5]} />
             <meshStandardMaterial color="#fdd" />
           </mesh>
+          {/* Eyes */}
+          <mesh position={[0.12, -0.1, 0.26]}>
+             <boxGeometry args={[0.07, 0.04, 0.04]} />
+             <meshStandardMaterial color="#000" />
+          </mesh>
+          <mesh position={[-0.12, -0.1, 0.26]}>
+             <boxGeometry args={[0.07, 0.04, 0.04]} />
+             <meshStandardMaterial color="#000" />
+          </mesh>
+          {/* Eyebrows - Strong / Determined */}
           <mesh position={[0.12, -0.05, 0.26]}>
-             <boxGeometry args={[0.06, 0.06, 0.06]} />
+             <boxGeometry args={[0.1, 0.02, 0.02]} />
              <meshStandardMaterial color="#000" />
           </mesh>
           <mesh position={[-0.12, -0.05, 0.26]}>
-             <boxGeometry args={[0.06, 0.06, 0.06]} />
+             <boxGeometry args={[0.1, 0.02, 0.02]} />
              <meshStandardMaterial color="#000" />
           </mesh>
+          {/* Nose */}
+          <mesh position={[0, -0.15, 0.27]}>
+             <boxGeometry args={[0.05, 0.08, 0.05]} />
+             <meshStandardMaterial color="#ecb" />
+          </mesh>
+          {/* Stoic Mouth */}
+          <mesh position={[0, -0.25, 0.26]}>
+             <boxGeometry args={[0.15, 0.01, 0.02]} />
+             <meshStandardMaterial color="#000" transparent opacity={0.3} />
+          </mesh>
         </group>
+
+        {/* Arms */}
         <group ref={leftArm} position={[0.45, 0.6, 0]}>
           <mesh position={[0, -0.3, 0]} castShadow>
             <boxGeometry args={[0.2, 0.6, 0.2]} />
@@ -137,6 +163,8 @@ function KarateMan({ onAttack, playerPosRef, kickRange }: any) {
             <meshStandardMaterial color="#fff" />
           </mesh>
         </group>
+
+        {/* Legs */}
         <group ref={leftLeg} position={[0.2, -0.2, 0]}>
           <mesh position={[0, -0.3, 0]} castShadow>
             <boxGeometry args={[0.25, 0.6, 0.25]} />
@@ -149,10 +177,12 @@ function KarateMan({ onAttack, playerPosRef, kickRange }: any) {
             <meshStandardMaterial color="#fff" />
           </mesh>
         </group>
+
+        {/* --- SURGICAL PINK STRIKE (REDUCED SIZE) --- */}
         {isAttacking && (
            <mesh position={[0, 0, (kickRange + 0.5) / 2]}>
-             <boxGeometry args={[0.6, 0.6, kickRange]} />
-             <meshStandardMaterial color="#ff00ff" emissive="#ff00ff" emissiveIntensity={10} transparent opacity={0.6} />
+             <boxGeometry args={[0.2, 0.2, kickRange]} />
+             <meshStandardMaterial color="#ff00ff" emissive="#ff00ff" emissiveIntensity={15} transparent opacity={0.7} />
            </mesh>
         )}
       </group>

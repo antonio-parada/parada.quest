@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { Physics, RigidBody } from '@react-three/rapier'
-import { KeyboardControls, useKeyboardControls, Html, PerspectiveCamera, Text, Billboard } from '@react-three/drei'
+import { KeyboardControls, useKeyboardControls, Html, PerspectiveCamera, Text, Billboard, OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
 import './App.css'
 
@@ -36,6 +36,22 @@ const keyboardMap = [
   { name: "attack", keys: ["k", "K", "Enter"] },
 ];
 
+function WorldNode({ position, label, color }: any) {
+    return (
+      <RigidBody type="fixed" position={position}>
+        <mesh castShadow>
+          <boxGeometry args={[10, 15, 10]} />
+          <meshStandardMaterial color="#0a0a0a" />
+        </mesh>
+        <mesh position={[0, 0, 5.1]}>
+           <boxGeometry args={[4, 6, 0.2]} />
+           <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.2} />
+        </mesh>
+        <Text position={[0, 9, 0]} fontSize={0.8} color={color}>{label}</Text>
+      </RigidBody>
+    );
+}
+
 function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput }: any) {
   const bodyRef = useRef<any>(null);
   const groupRef = useRef<any>(null);
@@ -49,8 +65,6 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput }: any) {
   useFrame((state) => {
     if (!bodyRef.current) return;
     const keys = getKeys();
-    
-    // CONSOLIDATED INPUT
     const input = {
         forward: keys.forward || mobileInput.current.forward,
         backward: keys.backward || mobileInput.current.backward,
@@ -78,14 +92,12 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput }: any) {
 
     const isMoving = direction.lengthSq() > 0;
     if (isMoving) {
-      direction.normalize().multiplyScalar(12);
+      direction.normalize().multiplyScalar(10);
       groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, Math.atan2(direction.x, direction.z), 0.2);
     }
     
-    // AGGRESSIVE PHYSICS DAMPING
     const targetVelX = isMoving ? direction.x : 0;
     const targetVelZ = isMoving ? direction.z : 0;
-    
     bodyRef.current.setLinvel({ 
         x: THREE.MathUtils.lerp(linvel.x, targetVelX, 0.25), 
         y: linvel.y, 
@@ -93,7 +105,7 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput }: any) {
     }, true);
 
     if (input.jump && Math.abs(linvel.y) < 0.1 && pos.y < 1.5) {
-       bodyRef.current.setLinvel({ x: linvel.x, y: 16, z: linvel.z }, true);
+       bodyRef.current.setLinvel({ x: linvel.x, y: 15, z: linvel.z }, true);
     }
 
     const t = state.clock.elapsedTime;
@@ -120,7 +132,6 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput }: any) {
         <group ref={rightArm} position={[-0.45, 0.6, 0]}><mesh position={[0, -0.3, 0]} castShadow><boxGeometry args={[0.2, 0.6, 0.2]} /><meshStandardMaterial color="#fff" /></mesh></group>
         <group ref={leftLeg} position={[0.2, -0.2, 0]}><mesh position={[0, -0.3, 0]} castShadow><boxGeometry args={[0.25, 0.6, 0.25]} /><meshStandardMaterial color="#fff" /></mesh></group>
         <group ref={rightLeg} position={[-0.2, -0.2, 0]}><mesh position={[0, -0.3, 0]} castShadow><boxGeometry args={[0.25, 0.6, 0.25]} /><meshStandardMaterial color="#fff" /></mesh></group>
-        
         {isAttacking && (
            <group>
              <mesh position={[0, 0, (kickRange + 0.5) / 2]}>
@@ -152,7 +163,6 @@ function EmotionalVessel({ data, creepRef, playerPosRef }: any) {
      }
      modelRef.current.rotation.z = Math.sin(state.clock.elapsedTime * 3) * 0.1;
   });
-
   return (
     <RigidBody ref={creepRef} position={data.position} colliders="cuboid" lockRotations mass={4}>
       <group ref={modelRef}>
@@ -170,11 +180,11 @@ function Scene({ mobileInput, setProtocol, setScore }: any) {
   const [kickRange, setKickRange] = useState(1.0);
   const [affirmation, setAffirmation] = useState("Holding space.");
   const [shards, setShards] = useState(() => Array.from({length: 12}).map((_, i) => ({
-    id: i, position: [(Math.random() - 0.5) * 120, 1.5, (Math.random() - 0.5) * 120] as [number, number, number]
+    id: i, position: [(Math.random() - 0.5) * 150, 1.5, (Math.random() - 0.5) * 150] as [number, number, number]
   })));
   const vessels = useRef(Array.from({length: 20}).map((_, i) => ({
     id: i,
-    position: [(Math.random() - 0.5) * 150, 2, (Math.random() - 0.5) * 150] as [number, number, number],
+    position: [(Math.random() - 0.5) * 200, 2, (Math.random() - 0.5) * 200] as [number, number, number],
     message: GASLIGHT_RHETORIC[Math.floor(Math.random() * GASLIGHT_RHETORIC.length)],
   })));
   const creepRefs = useRef(new Map());
@@ -207,11 +217,15 @@ function Scene({ mobileInput, setProtocol, setScore }: any) {
     if (playerPosRef.current) {
       const pPos = playerPosRef.current;
       let focusTarget = pPos.clone();
+      
+      // Dynamic Gravity Cam Logic
       creepRefs.current.forEach((ref) => {
          const cPos = ref.translation();
-         if (pPos.distanceTo(new THREE.Vector3(cPos.x, cPos.y, cPos.z)) < 15) focusTarget.lerp(new THREE.Vector3(cPos.x, cPos.y, cPos.z), 0.4);
+         const dist = pPos.distanceTo(new THREE.Vector3(cPos.x, cPos.y, cPos.z));
+         if (dist < 15) focusTarget.lerp(new THREE.Vector3(cPos.x, cPos.y, cPos.z), 0.4);
       });
-      camSmooth.current.lerp(pPos.clone().add(new THREE.Vector3(0, 18, 28)), 0.04);
+
+      camSmooth.current.lerp(pPos.clone().add(new THREE.Vector3(0, 20, 30)), 0.04);
       state.camera.position.copy(camSmooth.current);
       lookSmooth.current.lerp(focusTarget, 0.08);
       state.camera.lookAt(lookSmooth.current);
@@ -220,9 +234,8 @@ function Scene({ mobileInput, setProtocol, setScore }: any) {
 
   return (
     <>
-      <ambientLight intensity={0.5} />
-      <directionalLight position={[50, 70, 40]} castShadow intensity={2.5} />
-      <pointLight position={[0, 20, 0]} intensity={2} color="#ff00ff" />
+      <ambientLight intensity={0.4} />
+      <directionalLight position={[100, 100, 50]} castShadow intensity={2} />
       
       <Physics gravity={[0, -45, 0]}>
         <KarateMan onAttack={handleAttack} playerPosRef={playerPosRef} kickRange={kickRange} mobileInput={mobileInput} />
@@ -238,11 +251,27 @@ function Scene({ mobileInput, setProtocol, setScore }: any) {
             <mesh castShadow><octahedronGeometry args={[0.5]} /><meshStandardMaterial color="#00ff00" emissive="#00ff00" emissiveIntensity={5} /></mesh>
           </RigidBody>
         ))}
+
+        {/* World Building Nodes */}
+        <WorldNode position={[50, 0, -50]} label="GASLIGHT_BANK" color="#ffd700" />
+        <WorldNode position={[-60, 0, 40]} label="ALPHA_GYM" color="#ff0000" />
+        <WorldNode position={[30, 0, 70]} label="THE_BOARDROOM" color="#00ffff" />
+        <WorldNode position={[-40, 0, -80]} label="THE_PENTHOUSE" color="#fff" />
+
         <RigidBody type="fixed" position={[0, -1, 0]}>
-          <mesh receiveShadow><boxGeometry args={[1000, 2, 1000]} /><meshStandardMaterial color="#0a0a0a" /></mesh>
-          <gridHelper args={[1000, 250, "#ff00ff", "#111"]} position={[0, 1.01, 0]} />
+          <mesh receiveShadow><boxGeometry args={[2000, 2, 2000]} /><meshStandardMaterial color="#050505" /></mesh>
+          <gridHelper args={[2000, 400, "#ff00ff", "#111"]} position={[0, 1.01, 0]} />
         </RigidBody>
       </Physics>
+
+      <OrbitControls 
+        enablePan={false} 
+        enableZoom={true} 
+        maxPolarAngle={Math.PI / 2.2} 
+        minDistance={15} 
+        maxDistance={100}
+        makeDefault 
+      />
 
       <Html fullscreen zIndexRange={[100, 0]}>
          <div className="ui-overlay" style={{ pointerEvents: 'none' }}>
@@ -256,28 +285,15 @@ function Scene({ mobileInput, setProtocol, setScore }: any) {
 function App() {
   const [score, setScore] = useState(0);
   const [protocol, setProtocol] = useState("AFFIRM_AND_VALIDATE");
-  
-  // USE REF FOR ZERO-LATENCY INPUT
-  const mobileInput = useRef({
-      forward: false, backward: false, left: false, right: false, jump: false, attack: false
-  });
+  const mobileInput = useRef({ forward: false, backward: false, left: false, right: false, jump: false, attack: false });
 
-  const updateInput = (key: string, value: boolean) => {
-      (mobileInput.current as any)[key] = value;
-  };
-
-  const resetAllInput = () => {
-      mobileInput.current = { forward: false, backward: false, left: false, right: false, jump: false, attack: false };
-  };
+  const updateInput = (key: string, value: boolean) => { (mobileInput.current as any)[key] = value; };
+  const resetAllInput = () => { mobileInput.current = { forward: false, backward: false, left: false, right: false, jump: false, attack: false }; };
 
   useEffect(() => {
-    // GLOBAL RESET ON POINTER UP
     window.addEventListener('pointerup', resetAllInput);
-    window.addEventListener('blur', resetAllInput); // Reset if tab loses focus
-    return () => {
-        window.removeEventListener('pointerup', resetAllInput);
-        window.removeEventListener('blur', resetAllInput);
-    };
+    window.addEventListener('blur', resetAllInput);
+    return () => { window.removeEventListener('pointerup', resetAllInput); window.removeEventListener('blur', resetAllInput); };
   }, []);
 
   return (
@@ -292,42 +308,22 @@ function App() {
       <div className="ui-header">
            <h1>PARADA.QUEST</h1>
            <div className="protocol-tag">PROTOCOL: {protocol}</div>
-           <div className="integration-bar">
-               <div className="fill" style={{ width: `${Math.min(100, score * 5)}%` }}></div>
-           </div>
+           <div className="integration-bar"><div className="fill" style={{ width: `${Math.min(100, score * 5)}%` }}></div></div>
            <div className="score-text">EMOTIONAL_INTEGRATION: {score}</div>
       </div>
 
       <div className="mobile-controls">
           <div className="joystick-area">
-              <button 
-                onPointerDown={() => updateInput('forward', true)} 
-                className="joy-btn up"
-              >↑</button>
+              <button onPointerDown={() => updateInput('forward', true)} className="joy-btn up">↑</button>
               <div className="joy-row">
-                  <button 
-                    onPointerDown={() => updateInput('left', true)} 
-                    className="joy-btn left"
-                  >←</button>
-                  <button 
-                    onPointerDown={() => updateInput('right', true)} 
-                    className="joy-btn right"
-                  >→</button>
+                  <button onPointerDown={() => updateInput('left', true)} className="joy-btn left">←</button>
+                  <button onPointerDown={() => updateInput('right', true)} className="joy-btn right">→</button>
               </div>
-              <button 
-                onPointerDown={() => updateInput('backward', true)} 
-                className="joy-btn down"
-              >↓</button>
+              <button onPointerDown={() => updateInput('backward', true)} className="joy-btn down">↓</button>
           </div>
           <div className="action-area">
-              <button 
-                onPointerDown={() => updateInput('jump', true)} 
-                className="action-btn jump"
-              >REGULATE</button>
-              <button 
-                onPointerDown={() => updateInput('attack', true)} 
-                className="action-btn attack"
-              >HOLD_SPACE</button>
+              <button onPointerDown={() => updateInput('jump', true)} className="action-btn jump">REGULATE</button>
+              <button onPointerDown={() => updateInput('attack', true)} className="action-btn attack">HOLD_SPACE</button>
           </div>
       </div>
 

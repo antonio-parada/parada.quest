@@ -1,0 +1,145 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+:root {
+  --pixels-pink: #ff00ff;
+  --pixels-green: #00ff00;
+  --pixels-bg: #000;
+  --pixels-text: #fff;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--pixels-bg);
+  color: var(--pixels-text);
+  font-family: 'Press Start 2P', cursive;
+  overflow: hidden;
+  height: 100vh;
+}
+
+#root {
+  height: 100%;
+}
+
+.quest-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  background: radial-gradient(circle, #1a001a 0%, #000 100%);
+}
+
+/* CRT Scanlines Effect */
+.quest-container::after {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0; left: 0; bottom: 0; right: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+              linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+  z-index: 10;
+  background-size: 100% 4px, 3px 100%;
+  pointer-events: none;
+}
+
+/* Glitch Animation */
+@keyframes glitch {
+  0% { transform: translate(0) }
+  20% { transform: translate(-2px, 2px) }
+  40% { transform: translate(-2px, -2px) }
+  60% { transform: translate(2px, 2px) }
+  80% { transform: translate(2px, -2px) }
+  100% { transform: translate(0) }
+}
+
+.glitch-text {
+  color: var(--pixels-text);
+  text-shadow: 2px 0 var(--pixels-pink), -2px 0 var(--pixels-green);
+  animation: glitch 0.5s infinite;
+  font-size: 24px;
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+/* Character Avatar - CSS Pixel Style */
+.avatar-container {
+  width: 120px;
+  height: 120px;
+  position: relative;
+  margin-bottom: 40px;
+}
+
+.avatar-pink-buzz {
+  width: 80px;
+  height: 80px;
+  background-color: #fdd; /* Skin */
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  border: 4px solid #fff;
+}
+
+.avatar-pink-buzz::before {
+  content: "";
+  position: absolute;
+  top: -10px;
+  left: -4px;
+  width: 88px;
+  height: 20px;
+  background-color: var(--pixels-pink); /* Buzz Cut */
+  border: 4px solid #fff;
+}
+
+.avatar-eyes {
+  position: absolute;
+  top: 30px;
+  left: 15px;
+  width: 10px;
+  height: 10px;
+  background-color: #000;
+  box-shadow: 40px 0 #000;
+}
+
+/* Dialogue Box (Undertale Style) */
+.dialogue-box {
+  width: 90%;
+  max-width: 600px;
+  border: 4px solid #fff;
+  padding: 20px;
+  background-color: #000;
+  position: relative;
+  min-height: 150px;
+}
+
+.destiny-loop-text {
+  font-size: 12px;
+  line-height: 2;
+  color: #fff;
+}
+
+.destiny-label {
+  color: var(--pixels-pink);
+  margin-right: 10px;
+}
+
+.choice-prompt {
+  margin-top: 20px;
+  color: var(--pixels-green);
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.choice-prompt:hover {
+  text-decoration: underline;
+}
+
+/* Stats */
+.status-bar {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  font-size: 8px;
+  color: #666;
+}

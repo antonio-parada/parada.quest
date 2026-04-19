@@ -39,14 +39,8 @@ const keyboardMap = [
 function WorldNode({ position, label, color }: any) {
     return (
       <RigidBody type="fixed" position={position}>
-        <mesh castShadow>
-          <boxGeometry args={[10, 15, 10]} />
-          <meshStandardMaterial color="#0a0a0a" />
-        </mesh>
-        <mesh position={[0, 0, 5.1]}>
-           <boxGeometry args={[4, 6, 0.2]} />
-           <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.2} />
-        </mesh>
+        <mesh castShadow><boxGeometry args={[10, 15, 10]} /><meshStandardMaterial color="#0a0a0a" /></mesh>
+        <mesh position={[0, 0, 5.1]}><boxGeometry args={[4, 6, 0.2]} /><meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.2} /></mesh>
         <Text position={[0, 9, 0]} fontSize={0.8} color={color}>{label}</Text>
       </RigidBody>
     );
@@ -84,24 +78,34 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput }: any) {
        setTimeout(() => setIsAttacking(false), 250); 
     }
 
+    // CAMERA RELATIVE CALCULATION
     const direction = new THREE.Vector3();
-    if (input.forward) direction.z -= 1; 
-    if (input.backward) direction.z += 1;
-    if (input.left) direction.x -= 1; 
-    if (input.right) direction.x += 1;
+    const frontVector = new THREE.Vector3(0, 0, (input.backward ? 1 : 0) - (input.forward ? 1 : 0));
+    const sideVector = new THREE.Vector3((input.left ? 1 : 0) - (input.right ? 1 : 0), 0, 0);
 
-    const isMoving = direction.lengthSq() > 0;
+    // Get camera yaw
+    const cameraRotation = new THREE.Euler().setFromQuaternion(state.camera.quaternion, 'YXZ');
+    cameraRotation.x = 0; // Lock to horizontal plane
+    cameraRotation.z = 0;
+
+    direction
+      .subVectors(frontVector, sideVector)
+      .normalize()
+      .multiplyScalar(12)
+      .applyEuler(cameraRotation);
+
+    const isMoving = input.forward || input.backward || input.left || input.right;
     if (isMoving) {
-      direction.normalize().multiplyScalar(10);
-      groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, Math.atan2(direction.x, direction.z), 0.2);
+      const angle = Math.atan2(direction.x, direction.z);
+      groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, angle, 0.2);
     }
     
     const targetVelX = isMoving ? direction.x : 0;
     const targetVelZ = isMoving ? direction.z : 0;
     bodyRef.current.setLinvel({ 
-        x: THREE.MathUtils.lerp(linvel.x, targetVelX, 0.25), 
+        x: THREE.MathUtils.lerp(linvel.x, targetVelX, 0.3), 
         y: linvel.y, 
-        z: THREE.MathUtils.lerp(linvel.z, targetVelZ, 0.25) 
+        z: THREE.MathUtils.lerp(linvel.z, targetVelZ, 0.3) 
     }, true);
 
     if (input.jump && Math.abs(linvel.y) < 0.1 && pos.y < 1.5) {
@@ -190,8 +194,6 @@ function Scene({ mobileInput, setProtocol, setScore }: any) {
   const creepRefs = useRef(new Map());
   const playerPosRef = useRef(new THREE.Vector3());
   const controlsRef = useRef<any>(null);
-  
-  // Smoothed focus target for Gravity Cam
   const lookSmooth = useRef(new THREE.Vector3(0, 0, 0));
 
   const handleAttack = (playerPos: any) => {
@@ -219,15 +221,10 @@ function Scene({ mobileInput, setProtocol, setScore }: any) {
     if (playerPosRef.current && controlsRef.current) {
       const pPos = playerPosRef.current;
       let focusTarget = pPos.clone();
-      
-      // Gravity Cam Focus
       creepRefs.current.forEach((ref) => {
          const cPos = ref.translation();
-         const dist = pPos.distanceTo(new THREE.Vector3(cPos.x, cPos.y, cPos.z));
-         if (dist < 15) focusTarget.lerp(new THREE.Vector3(cPos.x, cPos.y, cPos.z), 0.4);
+         if (pPos.distanceTo(new THREE.Vector3(cPos.x, cPos.y, cPos.z)) < 15) focusTarget.lerp(new THREE.Vector3(cPos.x, cPos.y, cPos.z), 0.4);
       });
-
-      // SMOOTHLY UPDATE ORBIT TARGET
       lookSmooth.current.lerp(focusTarget, 0.1);
       controlsRef.current.target.copy(lookSmooth.current);
       controlsRef.current.update();
@@ -238,7 +235,6 @@ function Scene({ mobileInput, setProtocol, setScore }: any) {
     <>
       <ambientLight intensity={0.4} />
       <directionalLight position={[100, 100, 50]} castShadow intensity={2} />
-      
       <Physics gravity={[0, -45, 0]}>
         <KarateMan onAttack={handleAttack} playerPosRef={playerPosRef} kickRange={kickRange} mobileInput={mobileInput} />
         {vessels.current.map((v) => (
@@ -253,28 +249,16 @@ function Scene({ mobileInput, setProtocol, setScore }: any) {
             <mesh castShadow><octahedronGeometry args={[0.5]} /><meshStandardMaterial color="#00ff00" emissive="#00ff00" emissiveIntensity={5} /></mesh>
           </RigidBody>
         ))}
-
         <WorldNode position={[50, 0, -50]} label="GASLIGHT_BANK" color="#ffd700" />
         <WorldNode position={[-60, 0, 40]} label="ALPHA_GYM" color="#ff0000" />
         <WorldNode position={[30, 0, 70]} label="THE_BOARDROOM" color="#00ffff" />
         <WorldNode position={[-40, 0, -80]} label="THE_PENTHOUSE" color="#fff" />
-
         <RigidBody type="fixed" position={[0, -1, 0]}>
           <mesh receiveShadow><boxGeometry args={[2000, 2, 2000]} /><meshStandardMaterial color="#050505" /></mesh>
           <gridHelper args={[2000, 400, "#ff00ff", "#111"]} position={[0, 1.01, 0]} />
         </RigidBody>
       </Physics>
-
-      <OrbitControls 
-        ref={controlsRef}
-        enablePan={false} 
-        enableZoom={true} 
-        maxPolarAngle={Math.PI / 2.2} 
-        minDistance={15} 
-        maxDistance={100}
-        makeDefault 
-      />
-
+      <OrbitControls ref={controlsRef} enablePan={false} maxPolarAngle={Math.PI / 2.2} minDistance={15} maxDistance={100} makeDefault />
       <Html fullscreen zIndexRange={[100, 0]}>
          <div className="ui-overlay" style={{ pointerEvents: 'none' }}>
            <p style={{color: 'var(--pixels-green)', fontSize: '14px', marginBottom: '10px'}}>{affirmation.toUpperCase()}</p>
@@ -293,9 +277,16 @@ function App() {
   const resetAllInput = () => { mobileInput.current = { forward: false, backward: false, left: false, right: false, jump: false, attack: false }; };
 
   useEffect(() => {
+    // PREVENT IOS ZOOM & SCROLL
+    const prevent = (e: TouchEvent) => { if (e.touches.length > 1) e.preventDefault(); };
+    document.addEventListener('touchstart', prevent, { passive: false });
     window.addEventListener('pointerup', resetAllInput);
     window.addEventListener('blur', resetAllInput);
-    return () => { window.removeEventListener('pointerup', resetAllInput); window.removeEventListener('blur', resetAllInput); };
+    return () => { 
+        document.removeEventListener('touchstart', prevent);
+        window.removeEventListener('pointerup', resetAllInput); 
+        window.removeEventListener('blur', resetAllInput); 
+    };
   }, []);
 
   return (
@@ -314,7 +305,7 @@ function App() {
            <div className="score-text">EMOTIONAL_INTEGRATION: {score}</div>
       </div>
 
-      <div className="mobile-controls">
+      <div className="mobile-controls" onContextMenu={(e) => e.preventDefault()}>
           <div className="joystick-area">
               <button onPointerDown={(e) => { e.stopPropagation(); updateInput('forward', true); }} className="joy-btn up">↑</button>
               <div className="joy-row">

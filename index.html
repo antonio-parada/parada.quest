@@ -3,10 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/missingno.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Strict mobile lock: No zoom, no scaling, notch awareness -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>PARADA.QUEST | THE EMULATION</title>
 
-    <!-- iMessage & Social Preview -->
     <meta name="description" content="A pixel-based artifact of the destiny loop. Transcribing history through a low-res lens." />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://parada.quest/" />
@@ -17,9 +17,9 @@
     <meta property="og:image:width" content="600" />
     <meta property="og:image:height" content="600" />
 
-    <meta name="theme-color" content="#ff00ff" /> <!-- Neon Pink theme -->
+    <meta name="theme-color" content="#ff00ff" />
   </head>
-  <body style="background-color: #000; margin: 0; padding: 0; overflow: hidden;">
+  <body style="background-color: #000; margin: 0; padding: 0; overflow: hidden; position: fixed; width: 100%; height: 100%;">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

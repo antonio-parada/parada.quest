@@ -17,6 +17,11 @@ const DIVINE_WISDOM = [
   "Spirituality is disciplined empathy."
 ];
 
+const THERAPY_AFFIRMATIONS = [
+  "My boundaries are a safe house.", "I am reparenting this signal.", "Regulating the nervous system.",
+  "Holding space for the quiet.", "Honoring my needs.", "Integration complete.", "I am enough.", "Safe and sound."
+];
+
 const keyboardMap = [
   { name: "forward", keys: ["ArrowUp", "w", "W"] },
   { name: "backward", keys: ["ArrowDown", "s", "S"] },
@@ -71,7 +76,7 @@ function Dojo({ position }: any) {
     );
 }
 
-function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput, pp, isAttacking, setIsAttacking }: any) {
+function KarateMan({ playerPosRef, kickRange, mobileInput, pp, isAttacking, setIsAttacking }: any) {
   const bodyRef = useRef<any>(null);
   const groupRef = useRef<any>(null);
   const leftArm = useRef<any>(null);
@@ -85,6 +90,7 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput, pp, isAttac
   useFrame((state) => {
     if (!bodyRef.current) return;
     const keys = getKeys();
+    const t = state.clock.elapsedTime;
     const moveX = (keys.right ? 1 : 0) - (keys.left ? 1 : 0) + mobileInput.current.x;
     const moveZ = (keys.backward ? 1 : 0) - (keys.forward ? 1 : 0) + mobileInput.current.y;
     const pos = bodyRef.current.translation();
@@ -95,15 +101,8 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput, pp, isAttac
     if (wantAttack && !attackCooldown.current && pp > 0) {
        setIsAttacking(true);
        attackCooldown.current = true;
-       onAttack(); 
-       
-       setTimeout(() => {
-          setIsAttacking(false);
-       }, 350);
-
-       setTimeout(() => {
-          attackCooldown.current = false;
-       }, 700);
+       setTimeout(() => setIsAttacking(false), 300);
+       setTimeout(() => attackCooldown.current = false, 600);
     }
 
     const cameraRotation = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
@@ -116,17 +115,12 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput, pp, isAttac
       groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, Math.atan2(moveDirection.x, moveDirection.z), 0.2);
     }
     
-    bodyRef.current.setLinvel({ 
-        x: THREE.MathUtils.lerp(linvel.x, moveDirection.x, 0.3), 
-        y: linvel.y, 
-        z: THREE.MathUtils.lerp(linvel.z, moveDirection.z, 0.3) 
-    }, true);
+    bodyRef.current.setLinvel({ x: THREE.MathUtils.lerp(linvel.x, moveDirection.x, 0.3), y: linvel.y, z: THREE.MathUtils.lerp(linvel.z, moveDirection.z, 0.3) }, true);
 
     if ((keys.jump || mobileInput.current.jump) && Math.abs(linvel.y) < 0.1 && pos.y < 1.5) {
        bodyRef.current.setLinvel({ x: linvel.x, y: 16, z: linvel.z }, true);
     }
 
-    const t = state.clock.elapsedTime;
     if (moveDirection.lengthSq() > 0.1) {
       leftArm.current.rotation.x = Math.sin(t * 15) * 0.8;
       rightArm.current.rotation.x = Math.sin(t * 15 + Math.PI) * 0.8;
@@ -150,7 +144,6 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput, pp, isAttac
         <group ref={rightArm} position={[-0.45, 0.6, 0]}><mesh position={[0, -0.3, 0]} castShadow><boxGeometry args={[0.2, 0.6, 0.2]} /><meshStandardMaterial color="#fff" /></mesh></group>
         <group ref={leftLeg} position={[0.2, -0.2, 0]}><mesh position={[0, -0.3, 0]} castShadow><boxGeometry args={[0.25, 0.6, 0.25]} /><meshStandardMaterial color="#fff" /></mesh></group>
         <group ref={rightLeg} position={[-0.2, -0.2, 0]}><mesh position={[0, -0.3, 0]} castShadow><boxGeometry args={[0.25, 0.6, 0.25]} /><meshStandardMaterial color="#fff" /></mesh></group>
-        
         {isAttacking && (
            <group>
              <mesh position={[0, 0, (kickRange + 0.5) / 2]}>
@@ -158,7 +151,7 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput, pp, isAttac
                <meshStandardMaterial color="#ff00ff" emissive="#ff00ff" emissiveIntensity={30} transparent opacity={0.9} />
              </mesh>
              <mesh position={[0, 0, kickRange]}>
-                <sphereGeometry args={[0.3, 8, 8]} />
+                <sphereGeometry args={[0.4, 8, 8]} />
                 <meshStandardMaterial color="#ff00ff" emissive="#ff00ff" emissiveIntensity={10} />
              </mesh>
            </group>
@@ -170,9 +163,10 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput, pp, isAttac
 
 function ToxicVessel({ data, onHeal, playerPosRef, registerHeal }: any) {
   const vesselRef = useRef<any>(null);
+  const modelRef = useRef<any>(null);
   const [isHealed, setIsHealed] = useState(false);
 
-  useFrame(() => {
+  useFrame((state) => {
      if (!vesselRef.current || !playerPosRef.current || isHealed) return;
      const pos = vesselRef.current.translation();
      const pPos = playerPosRef.current;
@@ -191,6 +185,7 @@ function ToxicVessel({ data, onHeal, playerPosRef, registerHeal }: any) {
         vesselRef.current.setLinvel({ x: direction.x, y: 0, z: direction.z }, true);
         vesselRef.current.setRotation(new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.atan2(pPos.x - pos.x, pPos.z - pos.z), 0)), true);
      }
+     modelRef.current.rotation.z = Math.sin(state.clock.elapsedTime * (data.type === 'HEAVY' ? 2 : 5)) * 0.1;
   });
 
   const triggerHeal = () => {
@@ -204,21 +199,23 @@ function ToxicVessel({ data, onHeal, playerPosRef, registerHeal }: any) {
 
   return (
     <RigidBody ref={vesselRef} position={data.position} colliders="cuboid" lockRotations mass={isHealed ? 1 : 4} type={isHealed ? "fixed" : "dynamic"}>
-      {!isHealed ? (
-        <group>
-          <mesh position={[0, 0.4, 0]} castShadow><boxGeometry args={[data.type === 'HEAVY' ? 1 : 0.7, 1.2, 0.5]} /><meshStandardMaterial color={data.type === 'HEAVY' ? "#300" : "#111"} /></mesh>
-          <mesh position={[0, 1.1, 0]} castShadow><boxGeometry args={[0.5, 0.5, 0.5]} /><meshStandardMaterial color="#222" /></mesh>
-          <Billboard position={[0, 2.4, 0]}><Text fontSize={0.2} color="#fff" maxWidth={2.5} textAlign="center">{data.message}</Text></Billboard>
-        </group>
-      ) : (
-        <group>
-           <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
-              <mesh position={[0, 0.5, 0]}><cylinderGeometry args={[0.02, 0.02, 1.5]} /><meshStandardMaterial color="#00ff00" /></mesh>
-              <mesh position={[0, 1.2, 0]}><sphereGeometry args={[0.15, 12, 12]} /><meshStandardMaterial color="#ff00ff" emissive="#ff00ff" emissiveIntensity={5} /></mesh>
-              <Billboard position={[0, 1.8, 0]}><Text fontSize={0.25} color="#00ff00">HEALED</Text></Billboard>
-           </Float>
-        </group>
-      )}
+      <group ref={modelRef}>
+        {!isHealed ? (
+          <>
+            <mesh position={[0, 0.4, 0]} castShadow><boxGeometry args={[data.type === 'HEAVY' ? 1 : 0.7, 1.2, 0.5]} /><meshStandardMaterial color={data.type === 'HEAVY' ? "#300" : "#111"} /></mesh>
+            <mesh position={[0, 1.1, 0]} castShadow><boxGeometry args={[0.5, 0.5, 0.5]} /><meshStandardMaterial color="#222" /></mesh>
+            <Billboard position={[0, 2.4, 0]}><Text fontSize={0.2} color="#fff" maxWidth={2.5} textAlign="center">{data.message}</Text></Billboard>
+          </>
+        ) : (
+          <group>
+             <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
+                <mesh position={[0, 0.5, 0]}><cylinderGeometry args={[0.02, 0.02, 1.5]} /><meshStandardMaterial color="#00ff00" /></mesh>
+                <mesh position={[0, 1.2, 0]}><sphereGeometry args={[0.15, 12, 12]} /><meshStandardMaterial color="#ff00ff" emissive="#ff00ff" emissiveIntensity={5} /></mesh>
+                <Billboard position={[0, 1.8, 0]}><Text fontSize={0.25} color="#00ff00">HEALED</Text></Billboard>
+             </Float>
+          </group>
+        )}
+      </group>
     </RigidBody>
   );
 }
@@ -226,7 +223,7 @@ function ToxicVessel({ data, onHeal, playerPosRef, registerHeal }: any) {
 function Scene({ mobileInput, setScore, setPP, pp }: any) {
   const [kickRange, setKickRange] = useState(1.5);
   const [isAttacking, setIsAttacking] = useState(false);
-  const [affirmation, setAffirmation] = useState("Establishing peace.");
+  const [affirmation, setAffirmation] = useState("Breathe.");
   const vessels = useRef(Array.from({length: 30}).map((_, i) => ({
     id: i, type: Math.random() > 0.8 ? 'HEAVY' : 'NORMAL',
     position: [(Math.random() - 0.5) * 600, 2, (Math.random() - 0.5) * 600] as [number, number, number],
@@ -238,34 +235,28 @@ function Scene({ mobileInput, setScore, setPP, pp }: any) {
   const playerPosRef = useRef(new THREE.Vector3());
   const orbitRef = useRef<any>(null);
 
-  const handleAttackTrigger = () => {
-     setAffirmation("HANDSHAKE_ACTIVE");
-     // Hit detection logic now handled in useFrame during isAttacking
-  };
-
   useFrame((_, delta) => {
     if (!playerPosRef.current) return;
     const pPos = playerPosRef.current;
     const inDojo = pPos.distanceTo(new THREE.Vector3(0, 0, 0)) < 12;
     const regen = inDojo ? 20 * delta : 0;
     setPP((prev: number) => Math.min(100, prev + regen));
-    if (orbitRef.current) orbitRef.current.target.lerp(pPos.clone().add(new THREE.Vector3(0, 1.5, 0)), 0.1);
 
-    // REAL-TIME HIT DETECTION WHILE ATTACK IS ACTIVE
     if (isAttacking) {
+        setAffirmation("HANDSHAKE_ACTIVE");
         creepPhysicsRefs.current.forEach((ref, id) => {
            if (!ref) return;
            const vPos = ref.translation();
-           const dist = pPos.distanceTo(new THREE.Vector3(vPos.x, vPos.y, vPos.z));
-           if (dist < kickRange + 2.5) {
+           if (pPos.distanceTo(new THREE.Vector3(vPos.x, vPos.y, vPos.z)) < kickRange + 2.5) {
                const trigger = healMap.current.get(id);
                if (trigger) trigger();
            }
         });
     } else if (affirmation === "HANDSHAKE_ACTIVE") {
-       // Clear affirmation after strike finishes
-       setTimeout(() => setAffirmation("Breathe."), 500);
+        setAffirmation(THERAPY_AFFIRMATIONS[Math.floor(Math.random() * THERAPY_AFFIRMATIONS.length)]);
+        setTimeout(() => setAffirmation("Breathe."), 1500);
     }
+    if (orbitRef.current) orbitRef.current.target.lerp(pPos.clone().add(new THREE.Vector3(0, 1.5, 0)), 0.1);
   });
 
   return (
@@ -273,22 +264,9 @@ function Scene({ mobileInput, setScore, setPP, pp }: any) {
       <ambientLight intensity={0.4} />
       <directionalLight position={[100, 100, 50]} castShadow intensity={2} />
       <Physics gravity={[0, -45, 0]}>
-        <KarateMan 
-            onAttack={handleAttackTrigger} 
-            playerPosRef={playerPosRef} 
-            kickRange={kickRange} 
-            mobileInput={mobileInput} 
-            pp={pp} 
-            isAttacking={isAttacking} 
-            setIsAttacking={setIsAttacking} 
-        />
-        
+        <KarateMan playerPosRef={playerPosRef} kickRange={kickRange} mobileInput={mobileInput} pp={pp} isAttacking={isAttacking} setIsAttacking={setIsAttacking} />
         {vessels.current.map((v) => (
-          <ToxicVessel 
-            key={v.id} data={v} playerPosRef={playerPosRef} 
-            registerHeal={(id: any, trigger: any, ref: any) => { healMap.current.set(id, trigger); creepPhysicsRefs.current.set(id, ref); }} 
-            onHeal={() => { setScore((s:any) => s + 1); setPP((prev: any) => Math.min(100, prev + 15)); }} 
-          />
+          <ToxicVessel key={v.id} data={v} playerPosRef={playerPosRef} registerHeal={(id: any, trigger: any, ref: any) => { healMap.current.set(id, trigger); creepPhysicsRefs.current.set(id, ref); }} onHeal={() => { setScore((s:any) => s + 1); setPP((prev: any) => Math.min(100, prev + 15)); }} />
         ))}
         <Dojo position={[0, -0.5, 0]} />
         <Muse position={[40, 2, 40]} onWisdom={() => {

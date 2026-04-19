@@ -1,7 +1,7 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { Physics, RigidBody } from '@react-three/rapier'
-import { KeyboardControls, useKeyboardControls, Html } from '@react-three/drei'
+import { KeyboardControls, useKeyboardControls, Html, OrbitControls, PerspectiveCamera } from '@react-three/drei'
 import * as THREE from 'three'
 import './App.css'
 
@@ -27,19 +27,20 @@ const keyboardMap = [
 
 function KarateMan({ onAttack, playerPosRef }: any) {
   const bodyRef = useRef<any>(null);
+  const groupRef = useRef<any>(null);
   const [, getKeys] = useKeyboardControls();
-  const speed = 7;
-  const jumpStrength = 8;
+  const speed = 8;
+  const jumpStrength = 9;
   const [isAttacking, setIsAttacking] = useState(false);
 
-  useFrame(({ camera }) => {
+  useFrame(() => {
     if (!bodyRef.current) return;
     const { forward, backward, left, right, jump, attack } = getKeys();
     
     const pos = bodyRef.current.translation();
     const linvel = bodyRef.current.linvel();
     
-    playerPosRef.current.copy(pos); // Share pos for creeps
+    playerPosRef.current.copy(pos);
 
     if (attack && !isAttacking) {
        setIsAttacking(true);
@@ -55,47 +56,48 @@ function KarateMan({ onAttack, playerPosRef }: any) {
 
     if (direction.lengthSq() > 0) {
       direction.normalize().multiplyScalar(speed);
+      const angle = Math.atan2(direction.x, direction.z);
+      groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, angle, 0.15);
     }
     
     bodyRef.current.setLinvel({ x: direction.x, y: linvel.y, z: direction.z }, true);
 
-    // Jump
     if (jump && Math.abs(linvel.y) < 0.1 && pos.y < 1.5) {
        bodyRef.current.setLinvel({ x: linvel.x, y: jumpStrength, z: linvel.z }, true);
     }
-
-    // Camera follow (isometric 3rd person)
-    camera.position.lerp(new THREE.Vector3(pos.x, pos.y + 8, pos.z + 12), 0.1);
-    camera.lookAt(pos.x, pos.y, pos.z);
   });
 
   return (
     <RigidBody ref={bodyRef} position={[0, 2, 0]} colliders="cuboid" lockRotations mass={1}>
-      <group>
-        {/* Body */}
+      <group ref={groupRef}>
         <mesh position={[0, 0, 0]} castShadow>
-          <boxGeometry args={[0.8, 0.8, 0.8]} />
+          <boxGeometry args={[0.8, 1, 0.6]} />
           <meshStandardMaterial color="#fff" />
         </mesh>
-        {/* Head - Pink Buzz Cut */}
-        <mesh position={[0, 0.6, 0]} castShadow>
-          <boxGeometry args={[0.6, 0.4, 0.6]} />
+        <mesh position={[0, -0.1, 0]} castShadow>
+          <boxGeometry args={[0.85, 0.15, 0.65]} />
+          <meshStandardMaterial color="#000" />
+        </mesh>
+        <mesh position={[0, 0.75, 0]} castShadow>
+          <boxGeometry args={[0.6, 0.5, 0.6]} />
           <meshStandardMaterial color="#ff00ff" />
         </mesh>
-        {/* Eyes */}
-        <mesh position={[0.15, 0.6, 0.31]}>
-          <boxGeometry args={[0.1, 0.1, 0.1]} />
+        <mesh position={[0, 0.7, 0.05]} castShadow>
+          <boxGeometry args={[0.55, 0.4, 0.55]} />
+          <meshStandardMaterial color="#fdd" />
+        </mesh>
+        <mesh position={[0.15, 0.75, 0.31]}>
+          <boxGeometry args={[0.08, 0.08, 0.08]} />
           <meshStandardMaterial color="#000" />
         </mesh>
-        <mesh position={[-0.15, 0.6, 0.31]}>
-          <boxGeometry args={[0.1, 0.1, 0.1]} />
+        <mesh position={[-0.15, 0.75, 0.31]}>
+          <boxGeometry args={[0.08, 0.08, 0.08]} />
           <meshStandardMaterial color="#000" />
         </mesh>
-        {/* Kicking Leg */}
         {isAttacking && (
-           <mesh position={[0, -0.2, 0.6]}>
-             <boxGeometry args={[0.3, 0.3, 0.8]} />
-             <meshStandardMaterial color="#00ff00" />
+           <mesh position={[0, -0.1, 0.7]}>
+             <boxGeometry args={[0.4, 0.4, 1.2]} />
+             <meshStandardMaterial color="#ff00ff" emissive="#ff00ff" emissiveIntensity={0.5} />
            </mesh>
         )}
       </group>
@@ -104,28 +106,46 @@ function KarateMan({ onAttack, playerPosRef }: any) {
 }
 
 function Creep({ data, creepRef, playerPosRef }: any) {
-  useFrame(() => {
+  const modelRef = useRef<any>(null);
+  
+  useFrame((state) => {
      if (!creepRef.current || !playerPosRef.current) return;
      const pos = creepRef.current.translation();
      const pPos = playerPosRef.current;
      
-     // Move slowly towards player
      const direction = new THREE.Vector3(pPos.x - pos.x, 0, pPos.z - pos.z);
-     if (direction.lengthSq() > 6) { 
-        direction.normalize().multiplyScalar(1.5);
+     if (direction.lengthSq() > 4) { 
+        direction.normalize().multiplyScalar(1.8);
         const linvel = creepRef.current.linvel();
-        // Allow physics to handle Y, only control X and Z
         creepRef.current.setLinvel({ x: direction.x, y: linvel.y, z: direction.z }, true);
+        
+        const angle = Math.atan2(pPos.x - pos.x, pPos.z - pos.z);
+        modelRef.current.rotation.y = angle;
      }
+     modelRef.current.rotation.z = Math.sin(state.clock.elapsedTime * 4) * 0.05;
   });
 
   return (
     <RigidBody ref={creepRef} position={data.position} colliders="cuboid" lockRotations mass={2}>
-      <mesh castShadow>
-        <boxGeometry args={[0.8, 1.4, 0.8]} />
-        <meshStandardMaterial color="#333" />
-      </mesh>
-      <Html position={[0, 1.5, 0]} center transform distanceFactor={15}>
+      <group ref={modelRef}>
+        <mesh position={[0, 0.1, 0]} castShadow>
+          <boxGeometry args={[0.7, 1.2, 0.6]} />
+          <meshStandardMaterial color="#333" />
+        </mesh>
+        <mesh position={[0, 0.9, 0.1]} castShadow>
+          <boxGeometry args={[0.5, 0.5, 0.5]} />
+          <meshStandardMaterial color="#555" />
+        </mesh>
+        <mesh position={[0, 1.15, 0.1]} castShadow>
+          <boxGeometry args={[0.8, 0.1, 0.8]} />
+          <meshStandardMaterial color="#111" />
+        </mesh>
+        <mesh position={[0, 1.25, 0.1]} castShadow>
+          <boxGeometry args={[0.4, 0.2, 0.4]} />
+          <meshStandardMaterial color="#111" />
+        </mesh>
+      </group>
+      <Html position={[0, 1.8, 0]} center transform distanceFactor={12}>
          <div className="creep-dialogue">
            "{data.message}"
          </div>
@@ -135,9 +155,9 @@ function Creep({ data, creepRef, playerPosRef }: any) {
 }
 
 function Scene() {
-  const [creeps, setCreeps] = useState(() => Array.from({length: 12}).map((_, i) => ({
+  const creeps = useRef(Array.from({length: 15}).map((_, i) => ({
     id: i,
-    position: [(Math.random() - 0.5) * 30, 2, (Math.random() - 0.5) * 30],
+    position: [(Math.random() - 0.5) * 40, 2, (Math.random() - 0.5) * 40],
     message: CREEPY_LINES[Math.floor(Math.random() * CREEPY_LINES.length)],
   })));
 
@@ -146,14 +166,13 @@ function Scene() {
   const [score, setScore] = useState(0);
 
   const handleAttack = (playerPos: any) => {
-    creepRefs.current.forEach((ref, id) => {
+    creepRefs.current.forEach((ref) => {
       if (ref) {
         const enemyPos = ref.translation();
         const dist = new THREE.Vector3().subVectors(enemyPos, playerPos).length();
-        if (dist < 4) {
-          // Massive dropkick impulse
-          const impulse = new THREE.Vector3().subVectors(enemyPos, playerPos).normalize().multiplyScalar(40);
-          impulse.y = 20; // Uppercut
+        if (dist < 4.5) {
+          const impulse = new THREE.Vector3().subVectors(enemyPos, playerPos).normalize().multiplyScalar(50);
+          impulse.y = 25; 
           ref.applyImpulse(impulse, true);
           setScore(s => s + 1);
         }
@@ -161,15 +180,25 @@ function Scene() {
     });
   };
 
+  useFrame((state) => {
+    if (playerPosRef.current) {
+      const targetPos = playerPosRef.current;
+      const cameraOffset = new THREE.Vector3(0, 8, 12);
+      state.camera.position.lerp(targetPos.clone().add(cameraOffset), 0.1);
+      state.camera.lookAt(targetPos);
+    }
+  });
+
   return (
     <>
-      <ambientLight intensity={0.5} />
-      <directionalLight position={[10, 20, 10]} castShadow intensity={1} shadow-mapSize={[2048, 2048]} />
+      <ambientLight intensity={0.6} />
+      <directionalLight position={[15, 25, 10]} castShadow intensity={1.2} shadow-mapSize={[2048, 2048]} />
+      <pointLight position={[-10, 10, -10]} intensity={0.5} color="#ff00ff" />
       
-      <Physics>
+      <Physics gravity={[0, -20, 0]}>
         <KarateMan onAttack={handleAttack} playerPosRef={playerPosRef} />
         
-        {creeps.map((c) => (
+        {creeps.current.map((c) => (
           <Creep 
             key={c.id} 
             data={c} 
@@ -181,42 +210,32 @@ function Scene() {
           />
         ))}
 
-        {/* Floor */}
         <RigidBody type="fixed" colliders="cuboid" position={[0, -1, 0]}>
           <mesh receiveShadow>
             <boxGeometry args={[100, 2, 100]} />
-            <meshStandardMaterial color="#1a1a1a" />
+            <meshStandardMaterial color="#111" />
           </mesh>
-        </RigidBody>
-        
-        {/* Invisible Walls to keep them in arena */}
-        <RigidBody type="fixed" position={[0, 5, -25]}>
-          <boxGeometry args={[50, 10, 1]} />
-          <meshStandardMaterial transparent opacity={0} />
-        </RigidBody>
-        <RigidBody type="fixed" position={[0, 5, 25]}>
-          <boxGeometry args={[50, 10, 1]} />
-          <meshStandardMaterial transparent opacity={0} />
-        </RigidBody>
-        <RigidBody type="fixed" position={[-25, 5, 0]}>
-          <boxGeometry args={[1, 10, 50]} />
-          <meshStandardMaterial transparent opacity={0} />
-        </RigidBody>
-        <RigidBody type="fixed" position={[25, 5, 0]}>
-          <boxGeometry args={[1, 10, 50]} />
-          <meshStandardMaterial transparent opacity={0} />
+          <gridHelper args={[100, 50, "#333", "#222"]} position={[0, 1.01, 0]} />
         </RigidBody>
       </Physics>
+
+      <OrbitControls 
+        enablePan={false} 
+        enableZoom={true} 
+        maxPolarAngle={Math.PI / 2.1} 
+        makeDefault 
+      />
 
       <Html fullscreen zIndexRange={[100, 0]}>
          <div className="ui-overlay">
            <h1>PARADA.QUEST</h1>
-           <p style={{color: 'var(--pixels-cyan)'}}>STATUS: EMULATION_ACTIVE</p>
-           <p>TARGETS_NEUTRALIZED: {score}</p>
+           <p style={{color: 'var(--pixels-green)'}}>SYSTEM_STABLE // 3D_ACTIVE</p>
+           <p>CREEPS_DEFEATED: {score}</p>
            <div className="controls">
-             [WASD / ARROWS] MOVE<br/>
+             [WASD] MOVE<br/>
              [SPACE] JUMP<br/>
-             [K / ENTER] DROPKICK
+             [K] PINK_DROPKICK<br/>
+             [MOUSE] ORBIT_CAMERA
            </div>
          </div>
       </Html>
@@ -228,7 +247,8 @@ function App() {
   return (
     <div className="quest-container">
       <KeyboardControls map={keyboardMap}>
-        <Canvas shadows camera={{ position: [0, 5, 10], fov: 50 }}>
+        <Canvas shadows>
+          <PerspectiveCamera makeDefault position={[0, 10, 15]} fov={50} />
           <Scene />
         </Canvas>
       </KeyboardControls>

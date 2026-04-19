@@ -12,7 +12,8 @@ const CREEPY_LINES = [
   "You're so exotic.",
   "Can I buy you a drink?",
   "Why so serious?",
-  "Let me help you with that.",
+  "I can make you famous.",
+  "Just one photo?",
   "You look tired."
 ];
 
@@ -68,7 +69,6 @@ function KarateMan({ onAttack, playerPosRef }: any) {
   return (
     <RigidBody ref={bodyRef} position={[0, 2, 0]} colliders="cuboid" lockRotations mass={1}>
       <group ref={groupRef}>
-        {/* Karate Gi Body */}
         <mesh position={[0, 0, 0]} castShadow>
           <boxGeometry args={[0.8, 1, 0.6]} />
           <meshStandardMaterial color="#fff" />
@@ -77,7 +77,6 @@ function KarateMan({ onAttack, playerPosRef }: any) {
           <boxGeometry args={[0.85, 0.15, 0.65]} />
           <meshStandardMaterial color="#000" />
         </mesh>
-        {/* Pink Buzz Head */}
         <mesh position={[0, 0.75, 0]} castShadow>
           <boxGeometry args={[0.6, 0.5, 0.6]} />
           <meshStandardMaterial color="#ff00ff" />
@@ -94,11 +93,10 @@ function KarateMan({ onAttack, playerPosRef }: any) {
           <boxGeometry args={[0.08, 0.08, 0.08]} />
           <meshStandardMaterial color="#000" />
         </mesh>
-        {/* Pink Dropkick */}
         {isAttacking && (
            <mesh position={[0, -0.1, 0.7]}>
              <boxGeometry args={[0.4, 0.4, 1.2]} />
-             <meshStandardMaterial color="#ff00ff" emissive="#ff00ff" emissiveIntensity={0.8} />
+             <meshStandardMaterial color="#ff00ff" emissive="#ff00ff" emissiveIntensity={1} />
            </mesh>
         )}
       </group>
@@ -116,56 +114,81 @@ function Creep({ data, creepRef, playerPosRef }: any) {
      
      const direction = new THREE.Vector3(pPos.x - pos.x, 0, pPos.z - pos.z);
      if (direction.lengthSq() > 4) { 
-        direction.normalize().multiplyScalar(2.0);
+        direction.normalize().multiplyScalar(data.type === 'GREED' ? 2.4 : 1.5);
         const linvel = creepRef.current.linvel();
         creepRef.current.setLinvel({ x: direction.x, y: linvel.y, z: direction.z }, true);
         const angle = Math.atan2(pPos.x - pos.x, pPos.z - pos.z);
         modelRef.current.rotation.y = angle;
      }
-     // Sinister gluttonous wobble
-     modelRef.current.rotation.z = Math.sin(state.clock.elapsedTime * 3) * 0.08;
+     modelRef.current.rotation.z = Math.sin(state.clock.elapsedTime * (data.type === 'GLUTTONY' ? 2 : 5)) * 0.1;
   });
 
   return (
-    <RigidBody ref={creepRef} position={data.position} colliders="cuboid" lockRotations mass={3}>
+    <RigidBody ref={creepRef} position={data.position} colliders="cuboid" lockRotations mass={data.type === 'GLUTTONY' ? 5 : 2}>
       <group ref={modelRef}>
-        {/* GLUTTONY: Distended Torso */}
-        <mesh position={[0, 0, 0]} castShadow>
-          <sphereGeometry args={[0.7, 8, 8]} />
-          <meshStandardMaterial color="#444" />
-        </mesh>
-        {/* GREED: Gold Pinstripe / Accents */}
-        <mesh position={[0, 0.4, 0]} castShadow>
-          <boxGeometry args={[0.6, 0.8, 0.5]} />
-          <meshStandardMaterial color="#222" />
-        </mesh>
-        {/* MONEY: Gold Head/Mask */}
-        <mesh position={[0, 0.95, 0]} castShadow>
-          <boxGeometry args={[0.45, 0.45, 0.45]} />
-          <meshStandardMaterial color="#ffd700" metalness={0.8} roughness={0.2} />
-        </mesh>
-        {/* GREED: Long Spindly Arms */}
-        <mesh position={[0.6, 0.4, 0]}>
-          <boxGeometry args={[0.15, 1.2, 0.15]} />
-          <meshStandardMaterial color="#ffd700" />
-        </mesh>
-        <mesh position={[-0.6, 0.4, 0]}>
-          <boxGeometry args={[0.15, 1.2, 0.15]} />
-          <meshStandardMaterial color="#ffd700" />
-        </mesh>
-        {/* Top Hat of Wealth */}
-        <mesh position={[0, 1.25, 0]} castShadow>
-          <boxGeometry args={[0.6, 0.1, 0.6]} />
-          <meshStandardMaterial color="#000" />
-        </mesh>
-        <mesh position={[0, 1.45, 0]} castShadow>
-          <boxGeometry args={[0.3, 0.4, 0.3]} />
-          <meshStandardMaterial color="#000" />
-        </mesh>
-        {/* Anchored Dialogue - NOW INSIDE GROUP */}
-        <Html position={[0, 2.2, 0]} center transform>
-           <div className="creep-dialogue anchored">
-             <div className="money-tag">$ $ $</div>
+        {data.type === 'GLUTTONY' ? (
+          <>
+            {/* GLUTTONY: Tiered Fat Body */}
+            <mesh position={[0, 0, 0]} castShadow>
+              <sphereGeometry args={[0.9, 12, 12]} />
+              <meshStandardMaterial color="#222" roughness={1} />
+            </mesh>
+            <mesh position={[0, 0.5, 0]} castShadow>
+              <sphereGeometry args={[0.7, 12, 12]} />
+              <meshStandardMaterial color="#222" roughness={1} />
+            </mesh>
+            {/* Oily Head */}
+            <mesh position={[0, 1, 0]} castShadow>
+              <boxGeometry args={[0.4, 0.4, 0.4]} />
+              <meshStandardMaterial color="#111" />
+            </mesh>
+            {/* Glowing Red Eyes */}
+            <mesh position={[0.1, 1.05, 0.21]}>
+              <sphereGeometry args={[0.05]} />
+              <meshStandardMaterial color="#ff0000" emissive="#ff0000" emissiveIntensity={2} />
+            </mesh>
+            <mesh position={[-0.1, 1.05, 0.21]}>
+              <sphereGeometry args={[0.05]} />
+              <meshStandardMaterial color="#ff0000" emissive="#ff0000" emissiveIntensity={2} />
+            </mesh>
+          </>
+        ) : (
+          <>
+            {/* GREED: Spindly Gold Bar Body */}
+            <mesh position={[0, 0.5, 0]} castShadow>
+              <boxGeometry args={[0.3, 1.8, 0.3]} />
+              <meshStandardMaterial color="#ffd700" metalness={1} roughness={0.1} />
+            </mesh>
+            {/* Money Bag Head */}
+            <mesh position={[0, 1.5, 0]} castShadow>
+              <sphereGeometry args={[0.35, 8, 8]} />
+              <meshStandardMaterial color="#8b4513" />
+            </mesh>
+            {/* Dollar Sign Mask */}
+            <mesh position={[0, 1.5, 0.31]}>
+              <boxGeometry args={[0.1, 0.3, 0.05]} />
+              <meshStandardMaterial color="#ffd700" emissive="#ffd700" />
+            </mesh>
+            {/* Multiple Greedy Arms */}
+            <mesh position={[0.4, 1.2, 0]} rotation={[0, 0, 0.5]}>
+              <boxGeometry args={[0.1, 1, 0.1]} />
+              <meshStandardMaterial color="#ffd700" />
+            </mesh>
+            <mesh position={[-0.4, 1.2, 0]} rotation={[0, 0, -0.5]}>
+              <boxGeometry args={[0.1, 1, 0.1]} />
+              <meshStandardMaterial color="#ffd700" />
+            </mesh>
+            <mesh position={[0.4, 0.8, 0.2]} rotation={[0.5, 0, 0.5]}>
+              <boxGeometry args={[0.1, 0.8, 0.1]} />
+              <meshStandardMaterial color="#ffd700" />
+            </mesh>
+          </>
+        )}
+        
+        {/* Anchored Dialogue */}
+        <Html position={[0, 2.4, 0]} center transform>
+           <div className={`creep-dialogue anchored ${data.type.toLowerCase()}`}>
+             <div className="money-tag">{data.type === 'GREED' ? '$ $ $' : 'FAT_VOID'}</div>
              "{data.message}"
            </div>
         </Html>
@@ -177,6 +200,7 @@ function Creep({ data, creepRef, playerPosRef }: any) {
 function Scene() {
   const creeps = useRef(Array.from({length: 12}).map((_, i) => ({
     id: i,
+    type: Math.random() > 0.5 ? 'GREED' : 'GLUTTONY',
     position: [(Math.random() - 0.5) * 50, 2, (Math.random() - 0.5) * 50],
     message: CREEPY_LINES[Math.floor(Math.random() * CREEPY_LINES.length)],
   })));
@@ -191,8 +215,8 @@ function Scene() {
         const enemyPos = ref.translation();
         const dist = new THREE.Vector3().subVectors(enemyPos, playerPos).length();
         if (dist < 4.5) {
-          const impulse = new THREE.Vector3().subVectors(enemyPos, playerPos).normalize().multiplyScalar(60);
-          impulse.y = 35; 
+          const impulse = new THREE.Vector3().subVectors(enemyPos, playerPos).normalize().multiplyScalar(70);
+          impulse.y = 40; 
           ref.applyImpulse(impulse, true);
           setScore(s => s + 1);
         }
@@ -213,7 +237,7 @@ function Scene() {
     <>
       <ambientLight intensity={0.4} />
       <directionalLight position={[20, 30, 10]} castShadow intensity={1.5} shadow-mapSize={[2048, 2048]} />
-      <pointLight position={[0, 10, 0]} intensity={1} color="#ff00ff" />
+      <pointLight position={[0, 10, 0]} intensity={1.2} color="#ff00ff" />
       
       <Physics gravity={[0, -25, 0]}>
         <KarateMan onAttack={handleAttack} playerPosRef={playerPosRef} />
@@ -233,9 +257,9 @@ function Scene() {
         <RigidBody type="fixed" colliders="cuboid" position={[0, -1, 0]}>
           <mesh receiveShadow>
             <boxGeometry args={[120, 2, 120]} />
-            <meshStandardMaterial color="#0a0a0a" />
+            <meshStandardMaterial color="#050505" />
           </mesh>
-          <gridHelper args={[120, 60, "#222", "#111"]} position={[0, 1.01, 0]} />
+          <gridHelper args={[120, 60, "#111", "#080808"]} position={[0, 1.01, 0]} />
         </RigidBody>
       </Physics>
 
@@ -244,8 +268,8 @@ function Scene() {
       <Html fullscreen zIndexRange={[100, 0]}>
          <div className="ui-overlay">
            <h1>PARADA.QUEST</h1>
-           <p style={{color: 'var(--pixels-green)'}}>HANDSHAKE_STABLE // PURGING_NOISE</p>
-           <p>SYSTEM_PURIFIED: {score}</p>
+           <p style={{color: 'var(--pixels-green)'}}>EMULATION_ACTIVE // SIN_DETECTION_ON</p>
+           <p>ENTITIES_PURGED: {score}</p>
            <div className="controls">
              [WASD] MOVE // [SPACE] JUMP<br/>
              [K] PINK_DROPKICK<br/>

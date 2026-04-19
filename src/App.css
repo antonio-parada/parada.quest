@@ -76,6 +76,7 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 5px;
+  transform: scale(1.5);
 }
 
 .money-tag {
@@ -84,7 +85,17 @@ body {
   letter-spacing: 4px;
 }
 
-.creep-dialogue.anchored {
-  transform: scale(1.5);
-  box-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
+/* Gluttony Variant */
+.creep-dialogue.gluttony {
+  border-color: #444;
+  background: rgba(10, 10, 10, 0.98);
+}
+
+.creep-dialogue.gluttony .money-tag {
+  color: #ff0055; /* FAT_VOID intensity */
+}
+
+/* Greed Variant */
+.creep-dialogue.greed {
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
 }

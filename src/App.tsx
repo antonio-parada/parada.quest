@@ -162,14 +162,14 @@ function Creep({ data, creepRef, playerPosRef }: any) {
           <boxGeometry args={[0.3, 0.4, 0.3]} />
           <meshStandardMaterial color="#000" />
         </mesh>
+        {/* Anchored Dialogue - NOW INSIDE GROUP */}
+        <Html position={[0, 2.2, 0]} center transform>
+           <div className="creep-dialogue anchored">
+             <div className="money-tag">$ $ $</div>
+             "{data.message}"
+           </div>
+        </Html>
       </group>
-      {/* Anchored Dialogue */}
-      <Html position={[0, 2.2, 0]} center transform distanceFactor={10}>
-         <div className="creep-dialogue anchored">
-           <div className="money-tag">$ $ $</div>
-           "{data.message}"
-         </div>
-      </Html>
     </RigidBody>
   );
 }

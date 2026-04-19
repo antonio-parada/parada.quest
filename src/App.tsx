@@ -1,20 +1,19 @@
 import { useState, useRef } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { Physics, RigidBody } from '@react-three/rapier'
-import { KeyboardControls, useKeyboardControls, Html, OrbitControls, PerspectiveCamera, Text, Billboard } from '@react-three/drei'
+import { KeyboardControls, useKeyboardControls, Html, OrbitControls, PerspectiveCamera, Text, Billboard, Float } from '@react-three/drei'
 import * as THREE from 'three'
 import './App.css'
 
 const CREEPY_LINES = [
-  "You should smile more.",
-  "Where's your boyfriend?",
-  "Nice aesthetic, babe.",
-  "You're so exotic.",
-  "Can I buy you a drink?",
-  "Why so serious?",
-  "I can make you famous.",
-  "Just one photo?",
-  "You look tired."
+  "Maximize your ROI.",
+  "It's just business, babe.",
+  "Market disruption is key.",
+  "You're underperforming.",
+  "Smile for the shareholders.",
+  "Leverage your assets.",
+  "Why so emotional?",
+  "I'm a high-value male."
 ];
 
 const keyboardMap = [
@@ -26,12 +25,12 @@ const keyboardMap = [
   { name: "attack", keys: ["k", "K", "Enter"] },
 ];
 
-function KarateMan({ onAttack, playerPosRef }: any) {
+function KarateMan({ onAttack, playerPosRef, kickRange }: any) {
   const bodyRef = useRef<any>(null);
   const groupRef = useRef<any>(null);
   const [, getKeys] = useKeyboardControls();
   const speed = 9;
-  const jumpStrength = 11;
+  const jumpStrength = 12;
   const [isAttacking, setIsAttacking] = useState(false);
 
   useFrame(() => {
@@ -44,7 +43,7 @@ function KarateMan({ onAttack, playerPosRef }: any) {
     if (attack && !isAttacking) {
        setIsAttacking(true);
        onAttack(pos); 
-       setTimeout(() => setIsAttacking(false), 200); 
+       setTimeout(() => setIsAttacking(false), 250); 
     }
 
     const direction = new THREE.Vector3();
@@ -69,6 +68,7 @@ function KarateMan({ onAttack, playerPosRef }: any) {
   return (
     <RigidBody ref={bodyRef} position={[0, 2, 0]} colliders="cuboid" lockRotations mass={1}>
       <group ref={groupRef}>
+        {/* Karate Man: Disciplined Aesthetic */}
         <mesh position={[0, 0, 0]} castShadow>
           <boxGeometry args={[0.8, 1, 0.6]} />
           <meshStandardMaterial color="#fff" />
@@ -85,18 +85,11 @@ function KarateMan({ onAttack, playerPosRef }: any) {
           <boxGeometry args={[0.55, 0.4, 0.55]} />
           <meshStandardMaterial color="#fdd" />
         </mesh>
-        <mesh position={[0.15, 0.75, 0.31]}>
-          <boxGeometry args={[0.08, 0.08, 0.08]} />
-          <meshStandardMaterial color="#000" />
-        </mesh>
-        <mesh position={[-0.15, 0.75, 0.31]}>
-          <boxGeometry args={[0.08, 0.08, 0.08]} />
-          <meshStandardMaterial color="#000" />
-        </mesh>
+        {/* Pink Purification Strike - Scaled by kickRange */}
         {isAttacking && (
-           <mesh position={[0, -0.1, 0.7]}>
-             <boxGeometry args={[0.4, 0.4, 1.2]} />
-             <meshStandardMaterial color="#ff00ff" emissive="#ff00ff" emissiveIntensity={3} />
+           <mesh position={[0, -0.1, (kickRange + 0.5) / 2]}>
+             <boxGeometry args={[0.5, 0.5, kickRange]} />
+             <meshStandardMaterial color="#ff00ff" emissive="#ff00ff" emissiveIntensity={5} transparent opacity={0.8} />
            </mesh>
         )}
       </group>
@@ -104,7 +97,7 @@ function KarateMan({ onAttack, playerPosRef }: any) {
   );
 }
 
-function Creep({ data, creepRef, playerPosRef }: any) {
+function ToxicNoise({ data, creepRef, playerPosRef }: any) {
   const modelRef = useRef<any>(null);
   const innerGroupRef = useRef<any>(null);
   
@@ -115,90 +108,54 @@ function Creep({ data, creepRef, playerPosRef }: any) {
      
      const direction = new THREE.Vector3(pPos.x - pos.x, 0, pPos.z - pos.z);
      if (direction.lengthSq() > 4) { 
-        direction.normalize().multiplyScalar(data.type === 'GREED' ? 2.8 : 1.8);
+        direction.normalize().multiplyScalar(data.type === 'CORPORATE' ? 3.0 : 1.8);
         const linvel = creepRef.current.linvel();
         creepRef.current.setLinvel({ x: direction.x, y: linvel.y, z: direction.z }, true);
         const angle = Math.atan2(pPos.x - pos.x, pPos.z - pos.z);
         innerGroupRef.current.rotation.y = angle;
      }
-     modelRef.current.rotation.z = Math.sin(state.clock.elapsedTime * (data.type === 'GLUTTONY' ? 2 : 4)) * 0.1;
+     modelRef.current.rotation.z = Math.sin(state.clock.elapsedTime * 3) * 0.1;
   });
 
   return (
-    <RigidBody 
-      ref={creepRef} 
-      position={data.position} 
-      colliders="cuboid" 
-      lockRotations 
-      mass={data.type === 'GLUTTONY' ? 6 : 2}
-    >
+    <RigidBody ref={creepRef} position={data.position} colliders="cuboid" lockRotations mass={data.type === 'CORPORATE' ? 3 : 5}>
       <group ref={innerGroupRef}>
         <group ref={modelRef}>
-          {data.type === 'GLUTTONY' ? (
-            <>
-              <mesh position={[0, 0, 0]} castShadow>
-                <sphereGeometry args={[0.9, 12, 12]} />
-                <meshStandardMaterial color="#222" />
-              </mesh>
-              <mesh position={[0, 0.5, 0]} castShadow>
-                <sphereGeometry args={[0.7, 12, 12]} />
-                <meshStandardMaterial color="#222" />
-              </mesh>
-              <mesh position={[0, 1, 0]} castShadow>
-                <boxGeometry args={[0.4, 0.4, 0.4]} />
-                <meshStandardMaterial color="#111" />
-              </mesh>
-              <mesh position={[0.1, 1.05, 0.21]}>
-                <sphereGeometry args={[0.05]} />
-                <meshStandardMaterial color="#ff0000" emissive="#ff0000" emissiveIntensity={2} />
-              </mesh>
-              <mesh position={[-0.1, 1.05, 0.21]}>
-                <sphereGeometry args={[0.05]} />
-                <meshStandardMaterial color="#ff0000" emissive="#ff0000" emissiveIntensity={2} />
-              </mesh>
-            </>
-          ) : (
-            <>
-              <mesh position={[0, 0.5, 0]} castShadow>
-                <boxGeometry args={[0.3, 1.8, 0.3]} />
-                <meshStandardMaterial color="#ffd700" metalness={1} roughness={0.1} />
-              </mesh>
-              <mesh position={[0, 1.5, 0]} castShadow>
-                <sphereGeometry args={[0.35, 8, 8]} />
-                <meshStandardMaterial color="#8b4513" />
-              </mesh>
-              <mesh position={[0, 1.5, 0.31]}>
-                <boxGeometry args={[0.1, 0.3, 0.05]} />
-                <meshStandardMaterial color="#ffd700" emissive="#ffd700" />
-              </mesh>
-              <mesh position={[0.4, 1.2, 0]} rotation={[0, 0, 0.5]}>
-                <boxGeometry args={[0.1, 1, 0.1]} />
-                <meshStandardMaterial color="#ffd700" />
-              </mesh>
-              <mesh position={[-0.4, 1.2, 0]} rotation={[0, 0, -0.5]}>
-                <boxGeometry args={[0.1, 1, 0.1]} />
-                <meshStandardMaterial color="#ffd700" />
-              </mesh>
-            </>
-          )}
+          {/* TOXIC CORPORATE ARCHETYPE */}
+          <mesh position={[0, 0.4, 0]} castShadow>
+            <boxGeometry args={[0.7, 1.2, 0.5]} />
+            <meshStandardMaterial color={data.type === 'CORPORATE' ? "#1a1a1a" : "#444"} />
+          </mesh>
+          {/* Gold Bar Accessory (Greed) */}
+          <mesh position={[0.4, 0.2, 0.3]} castShadow>
+            <boxGeometry args={[0.2, 0.1, 0.4]} />
+            <meshStandardMaterial color="#ffd700" metalness={1} />
+          </mesh>
+          <mesh position={[0, 1.1, 0]} castShadow>
+            <boxGeometry args={[0.5, 0.5, 0.5]} />
+            <meshStandardMaterial color="#333" />
+          </mesh>
+          {/* Glowing Greed Eyes */}
+          <mesh position={[0.12, 1.15, 0.26]}>
+            <sphereGeometry args={[0.04]} />
+            <meshStandardMaterial color="#ffd700" emissive="#ffd700" emissiveIntensity={2} />
+          </mesh>
+          <mesh position={[-0.12, 1.15, 0.26]}>
+            <sphereGeometry args={[0.04]} />
+            <meshStandardMaterial color="#ffd700" emissive="#ffd700" emissiveIntensity={2} />
+          </mesh>
         </group>
 
-        {/* 3D Billboarding Text - 100% Anchored */}
         <Billboard position={[0, 2.5, 0]}>
-          {/* Background Plane for the "Box" look */}
-          <mesh position={[0, 0, -0.1]}>
-            <planeGeometry args={[4, 1.2]} />
-            <meshStandardMaterial color="#000" transparent opacity={0.8} />
-          </mesh>
           <Text
             fontSize={0.25}
-            color={data.type === 'GREED' ? '#ffd700' : '#ff0055'}
+            color="#fff"
             anchorX="center"
             anchorY="middle"
-            maxWidth={3.5}
+            maxWidth={3}
             textAlign="center"
           >
-            {data.type === 'GREED' ? '$ $ $' : 'FAT_VOID'}\n"{data.message}"
+            {data.message}
           </Text>
         </Billboard>
       </group>
@@ -206,31 +163,57 @@ function Creep({ data, creepRef, playerPosRef }: any) {
   );
 }
 
+function UpliftShard({ position, onCollect }: any) {
+  return (
+    <Float speed={5} rotationIntensity={2} floatIntensity={2}>
+      <RigidBody type="fixed" position={position} sensor onIntersectionEnter={onCollect}>
+        <mesh castShadow>
+          <octahedronGeometry args={[0.5]} />
+          <meshStandardMaterial color="#ff00ff" emissive="#ff00ff" emissiveIntensity={2} />
+        </mesh>
+        <Text position={[0, 1, 0]} fontSize={0.3} color="#00ff00">UPLIFT</Text>
+      </RigidBody>
+    </Float>
+  );
+}
+
 function Scene() {
-  const creeps = useRef(Array.from({length: 12}).map((_, i) => ({
+  const [score, setScore] = useState(0);
+  const [kickRange, setKickRange] = useState(1.5);
+  const [shards, setShards] = useState(() => Array.from({length: 5}).map((_, i) => ({
     id: i,
-    type: Math.random() > 0.5 ? 'GREED' : 'GLUTTONY',
+    position: [(Math.random() - 0.5) * 40, 1.5, (Math.random() - 0.5) * 40]
+  })));
+  
+  const creeps = useRef(Array.from({length: 10}).map((_, i) => ({
+    id: i,
+    type: Math.random() > 0.5 ? 'CORPORATE' : 'GLUTTON',
     position: [(Math.random() - 0.5) * 60, 2, (Math.random() - 0.5) * 60],
     message: CREEPY_LINES[Math.floor(Math.random() * CREEPY_LINES.length)],
   })));
 
   const creepRefs = useRef(new Map());
   const playerPosRef = useRef(new THREE.Vector3());
-  const [score, setScore] = useState(0);
 
   const handleAttack = (playerPos: any) => {
     creepRefs.current.forEach((ref) => {
       if (ref) {
         const enemyPos = ref.translation();
         const dist = new THREE.Vector3().subVectors(enemyPos, playerPos).length();
-        if (dist < 5.0) {
-          const impulse = new THREE.Vector3().subVectors(enemyPos, playerPos).normalize().multiplyScalar(90);
+        // Attack range increases with power-ups
+        if (dist < kickRange + 2) {
+          const impulse = new THREE.Vector3().subVectors(enemyPos, playerPos).normalize().multiplyScalar(100);
           impulse.y = 50; 
           ref.applyImpulse(impulse, true);
           setScore(s => s + 1);
         }
       }
     });
+  };
+
+  const collectShard = (id: number) => {
+    setShards(prev => prev.filter(s => s.id !== id));
+    setKickRange(prev => prev + 1.5);
   };
 
   useFrame((state) => {
@@ -244,15 +227,15 @@ function Scene() {
 
   return (
     <>
-      <ambientLight intensity={0.4} />
-      <directionalLight position={[20, 30, 10]} castShadow intensity={1.5} shadow-mapSize={[2048, 2048]} />
+      <ambientLight intensity={0.5} />
+      <directionalLight position={[20, 40, 10]} castShadow intensity={1.5} shadow-mapSize={[2048, 2048]} />
       <pointLight position={[0, 10, 0]} intensity={2} color="#ff00ff" />
       
-      <Physics gravity={[0, -25, 0]}>
-        <KarateMan onAttack={handleAttack} playerPosRef={playerPosRef} />
+      <Physics gravity={[0, -30, 0]}>
+        <KarateMan onAttack={handleAttack} playerPosRef={playerPosRef} kickRange={kickRange} />
         
         {creeps.current.map((c) => (
-          <Creep 
+          <ToxicNoise 
             key={c.id} 
             data={c} 
             creepRef={(el: any) => {
@@ -263,12 +246,26 @@ function Scene() {
           />
         ))}
 
+        {shards.map((s) => (
+          <UpliftShard key={s.id} position={s.position} onCollect={() => collectShard(s.id)} />
+        ))}
+
+        {/* Big City Streets Floor */}
         <RigidBody type="fixed" colliders="cuboid" position={[0, -1, 0]}>
           <mesh receiveShadow>
-            <boxGeometry args={[150, 2, 150]} />
-            <meshStandardMaterial color="#050505" />
+            <boxGeometry args={[200, 2, 200]} />
+            <meshStandardMaterial color="#111" />
           </mesh>
-          <gridHelper args={[150, 75, "#151515", "#0a0a0a"]} position={[0, 1.01, 0]} />
+          {/* Concrete & Vine Grid */}
+          <gridHelper args={[200, 100, "#00ff00", "#111"]} position={[0, 1.01, 0]} />
+        </RigidBody>
+
+        {/* Brutalist "Walls" of Capital */}
+        <RigidBody type="fixed" position={[0, 10, -50]}>
+          <mesh><boxGeometry args={[100, 20, 5]} /><meshStandardMaterial color="#0a0a0a" /></mesh>
+        </RigidBody>
+        <RigidBody type="fixed" position={[0, 10, 50]}>
+          <mesh><boxGeometry args={[100, 20, 5]} /><meshStandardMaterial color="#0a0a0a" /></mesh>
         </RigidBody>
       </Physics>
 
@@ -277,12 +274,12 @@ function Scene() {
       <Html fullscreen zIndexRange={[100, 0]}>
          <div className="ui-overlay">
            <h1>PARADA.QUEST</h1>
-           <p style={{color: 'var(--pixels-green)'}}>NODE_ESTABLISHED // FILTER_ACTIVE</p>
-           <p>NOISE_FILTERED: {score}</p>
+           <p style={{color: 'var(--pixels-pink)'}}>THE_UPLIFT_PROTOCOL // ACTIVE</p>
+           <p>TOXIC_NOISE_PURGED: {score}</p>
+           <p>KICK_EXTENSION: {((kickRange - 1.5) / 1.5).toFixed(1)}x</p>
            <div className="controls">
-             [WASD] MOVE // [SPACE] JUMP<br/>
-             [K] PURGE_SIGNAL<br/>
-             [MOUSE] ORBIT_SCAN
+             [WASD] MOVE // [K] PURIFYING_KICK<br/>
+             COLLECT [UPLIFT_SHARDS] TO EXTEND THE LIGHT
            </div>
          </div>
       </Html>
@@ -295,7 +292,7 @@ function App() {
     <div className="quest-container">
       <KeyboardControls map={keyboardMap}>
         <Canvas shadows dpr={[1, 2]}>
-          <PerspectiveCamera makeDefault position={[0, 15, 25]} fov={40} />
+          <PerspectiveCamera makeDefault position={[0, 20, 30]} fov={35} />
           <Scene />
         </Canvas>
       </KeyboardControls>

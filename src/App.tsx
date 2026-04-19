@@ -71,7 +71,7 @@ function Dojo({ position }: any) {
     );
 }
 
-function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput, pp }: any) {
+function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput, pp, isAttacking, setIsAttacking }: any) {
   const bodyRef = useRef<any>(null);
   const groupRef = useRef<any>(null);
   const leftArm = useRef<any>(null);
@@ -80,7 +80,6 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput, pp }: any) 
   const rightLeg = useRef<any>(null);
   const [, getKeys] = useKeyboardControls();
   const { camera } = useThree();
-  const [isAttacking, setIsAttacking] = useState(false);
   const attackCooldown = useRef(false);
 
   useFrame((state) => {
@@ -96,9 +95,15 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput, pp }: any) 
     if (wantAttack && !attackCooldown.current && pp > 0) {
        setIsAttacking(true);
        attackCooldown.current = true;
-       onAttack(pos); 
-       setTimeout(() => setIsAttacking(false), 300);
-       setTimeout(() => attackCooldown.current = false, 600);
+       onAttack(); 
+       
+       setTimeout(() => {
+          setIsAttacking(false);
+       }, 350);
+
+       setTimeout(() => {
+          attackCooldown.current = false;
+       }, 700);
     }
 
     const cameraRotation = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
@@ -145,6 +150,7 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput, pp }: any) 
         <group ref={rightArm} position={[-0.45, 0.6, 0]}><mesh position={[0, -0.3, 0]} castShadow><boxGeometry args={[0.2, 0.6, 0.2]} /><meshStandardMaterial color="#fff" /></mesh></group>
         <group ref={leftLeg} position={[0.2, -0.2, 0]}><mesh position={[0, -0.3, 0]} castShadow><boxGeometry args={[0.25, 0.6, 0.25]} /><meshStandardMaterial color="#fff" /></mesh></group>
         <group ref={rightLeg} position={[-0.2, -0.2, 0]}><mesh position={[0, -0.3, 0]} castShadow><boxGeometry args={[0.25, 0.6, 0.25]} /><meshStandardMaterial color="#fff" /></mesh></group>
+        
         {isAttacking && (
            <group>
              <mesh position={[0, 0, (kickRange + 0.5) / 2]}>
@@ -152,8 +158,8 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput, pp }: any) 
                <meshStandardMaterial color="#ff00ff" emissive="#ff00ff" emissiveIntensity={30} transparent opacity={0.9} />
              </mesh>
              <mesh position={[0, 0, kickRange]}>
-                <sphereGeometry args={[0.4, 8, 8]} />
-                <meshStandardMaterial color="#ff00ff" emissive="#ff00ff" emissiveIntensity={5} />
+                <sphereGeometry args={[0.3, 8, 8]} />
+                <meshStandardMaterial color="#ff00ff" emissive="#ff00ff" emissiveIntensity={10} />
              </mesh>
            </group>
         )}
@@ -209,7 +215,7 @@ function ToxicVessel({ data, onHeal, playerPosRef, registerHeal }: any) {
            <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
               <mesh position={[0, 0.5, 0]}><cylinderGeometry args={[0.02, 0.02, 1.5]} /><meshStandardMaterial color="#00ff00" /></mesh>
               <mesh position={[0, 1.2, 0]}><sphereGeometry args={[0.15, 12, 12]} /><meshStandardMaterial color="#ff00ff" emissive="#ff00ff" emissiveIntensity={5} /></mesh>
-              <Billboard position={[0, 1.8, 0]}><Text fontSize={0.2} color="#00ff00">SIGNAL_HEALED</Text></Billboard>
+              <Billboard position={[0, 1.8, 0]}><Text fontSize={0.25} color="#00ff00">HEALED</Text></Billboard>
            </Float>
         </group>
       )}
@@ -219,27 +225,22 @@ function ToxicVessel({ data, onHeal, playerPosRef, registerHeal }: any) {
 
 function Scene({ mobileInput, setScore, setPP, pp }: any) {
   const [kickRange, setKickRange] = useState(1.5);
+  const [isAttacking, setIsAttacking] = useState(false);
   const [affirmation, setAffirmation] = useState("Establishing peace.");
   const vessels = useRef(Array.from({length: 30}).map((_, i) => ({
     id: i, type: Math.random() > 0.8 ? 'HEAVY' : 'NORMAL',
     position: [(Math.random() - 0.5) * 600, 2, (Math.random() - 0.5) * 600] as [number, number, number],
     message: TOXIC_PHRASES[Math.floor(Math.random() * TOXIC_PHRASES.length)],
   })));
+  
   const healMap = useRef(new Map());
   const creepPhysicsRefs = useRef(new Map());
   const playerPosRef = useRef(new THREE.Vector3());
   const orbitRef = useRef<any>(null);
 
-  const handleAttack = (playerPos: THREE.Vector3) => {
+  const handleAttackTrigger = () => {
      setAffirmation("HANDSHAKE_ACTIVE");
-     creepPhysicsRefs.current.forEach((ref, id) => {
-        if (!ref) return;
-        const vPos = ref.translation();
-        if (playerPos.distanceTo(new THREE.Vector3(vPos.x, vPos.y, vPos.z)) < kickRange + 2.5) {
-            const trigger = healMap.current.get(id);
-            if (trigger) trigger();
-        }
-     });
+     // Hit detection logic now handled in useFrame during isAttacking
   };
 
   useFrame((_, delta) => {
@@ -249,6 +250,22 @@ function Scene({ mobileInput, setScore, setPP, pp }: any) {
     const regen = inDojo ? 20 * delta : 0;
     setPP((prev: number) => Math.min(100, prev + regen));
     if (orbitRef.current) orbitRef.current.target.lerp(pPos.clone().add(new THREE.Vector3(0, 1.5, 0)), 0.1);
+
+    // REAL-TIME HIT DETECTION WHILE ATTACK IS ACTIVE
+    if (isAttacking) {
+        creepPhysicsRefs.current.forEach((ref, id) => {
+           if (!ref) return;
+           const vPos = ref.translation();
+           const dist = pPos.distanceTo(new THREE.Vector3(vPos.x, vPos.y, vPos.z));
+           if (dist < kickRange + 2.5) {
+               const trigger = healMap.current.get(id);
+               if (trigger) trigger();
+           }
+        });
+    } else if (affirmation === "HANDSHAKE_ACTIVE") {
+       // Clear affirmation after strike finishes
+       setTimeout(() => setAffirmation("Breathe."), 500);
+    }
   });
 
   return (
@@ -256,9 +273,22 @@ function Scene({ mobileInput, setScore, setPP, pp }: any) {
       <ambientLight intensity={0.4} />
       <directionalLight position={[100, 100, 50]} castShadow intensity={2} />
       <Physics gravity={[0, -45, 0]}>
-        <KarateMan onAttack={handleAttack} playerPosRef={playerPosRef} kickRange={kickRange} mobileInput={mobileInput} pp={pp} />
+        <KarateMan 
+            onAttack={handleAttackTrigger} 
+            playerPosRef={playerPosRef} 
+            kickRange={kickRange} 
+            mobileInput={mobileInput} 
+            pp={pp} 
+            isAttacking={isAttacking} 
+            setIsAttacking={setIsAttacking} 
+        />
+        
         {vessels.current.map((v) => (
-          <ToxicVessel key={v.id} data={v} playerPosRef={playerPosRef} registerHeal={(id: any, trigger: any, ref: any) => { healMap.current.set(id, trigger); creepPhysicsRefs.current.set(id, ref); }} onHeal={() => { setScore((s:any) => s + 1); setPP((prev: any) => Math.min(100, prev + 15)); }} />
+          <ToxicVessel 
+            key={v.id} data={v} playerPosRef={playerPosRef} 
+            registerHeal={(id: any, trigger: any, ref: any) => { healMap.current.set(id, trigger); creepPhysicsRefs.current.set(id, ref); }} 
+            onHeal={() => { setScore((s:any) => s + 1); setPP((prev: any) => Math.min(100, prev + 15)); }} 
+          />
         ))}
         <Dojo position={[0, -0.5, 0]} />
         <Muse position={[40, 2, 40]} onWisdom={() => {
@@ -305,6 +335,7 @@ function App() {
              <div className="meter-label">PEACE_POINTS (PP)</div>
              <div className="pp-bar"><div className="fill" style={{ width: `${pp}%`, backgroundColor: pp > 30 ? 'var(--pixels-green)' : '#ff0000' }}></div></div>
              <div className="score-text">ENCLAVE_HEALED: {score}/30</div>
+             <div className="score-text" style={{color: 'var(--pixels-pink)', marginTop: '5px'}}>INTEGRATION_SYNC: {Math.floor((score/30)*100)}%</div>
         </div>
         <div className="mobile-interface">
             <div className="virtual-joystick" ref={joystickRef} onPointerMove={handleJoystick} onPointerUp={() => {mobileInput.current.x = 0; mobileInput.current.y = 0;}} onTouchMove={handleJoystick} onTouchEnd={() => {mobileInput.current.x = 0; mobileInput.current.y = 0;}}>

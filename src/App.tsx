@@ -1,30 +1,20 @@
 import { useState, useRef, useEffect } from 'react'
-import { Canvas, useFrame } from '@react-three/fiber'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Physics, RigidBody } from '@react-three/rapier'
 import { KeyboardControls, useKeyboardControls, Html, PerspectiveCamera, Text, Billboard, PointerLockControls, OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
 import './App.css'
 
 const GASLIGHT_RHETORIC = [
-  "You're overreacting.",
-  "I'm just being honest.",
-  "You're too emotional.",
-  "Stop playing the victim.",
-  "It's your fault, really.",
-  "I never said that.",
-  "You're being irrational.",
-  "Why are you so sensitive?"
+  "You're overreacting.", "I'm just being honest.", "You're too emotional.",
+  "Stop playing the victim.", "It's your fault, really.", "I never said that.",
+  "You're being irrational.", "Why are you so sensitive?"
 ];
 
 const THERAPY_AFFIRMATIONS = [
-  "I am holding space.",
-  "Validating your experience.",
-  "Checking my capacity.",
-  "Setting a healthy boundary.",
-  "Processing the trigger.",
-  "Reparenting the signal.",
-  "Honoring my needs.",
-  "Regulating the nervous system."
+  "I am holding space.", "Validating your experience.", "Checking my capacity.",
+  "Setting a healthy boundary.", "Processing the trigger.", "Reparenting the signal.",
+  "Honoring my needs.", "Regulating the nervous system."
 ];
 
 const keyboardMap = [
@@ -54,13 +44,12 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput }: any) {
   const leftLeg = useRef<any>(null);
   const rightLeg = useRef<any>(null);
   const [, getKeys] = useKeyboardControls();
+  const { camera } = useThree();
   const [isAttacking, setIsAttacking] = useState(false);
 
   useFrame((state) => {
     if (!bodyRef.current) return;
     const keys = getKeys();
-    
-    // COMBINED INPUT VECTORS
     const moveX = (keys.right ? 1 : 0) - (keys.left ? 1 : 0) + mobileInput.current.x;
     const moveZ = (keys.backward ? 1 : 0) - (keys.forward ? 1 : 0) + mobileInput.current.y;
     const jumpInput = keys.jump || mobileInput.current.jump;
@@ -76,29 +65,28 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput }: any) {
        setTimeout(() => setIsAttacking(false), 250); 
     }
 
-    // CAMERA-RELATIVE MOVEMENT
-    const cameraRotation = new THREE.Euler().setFromQuaternion(state.camera.quaternion, 'YXZ');
+    const cameraRotation = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
     cameraRotation.x = 0; cameraRotation.z = 0;
 
-    const direction = new THREE.Vector3(moveX, 0, moveZ);
-    if (direction.lengthSq() > 0.01) {
-      direction.normalize().multiplyScalar(12).applyEuler(cameraRotation);
-      const angle = Math.atan2(direction.x, direction.z);
+    const moveDirection = new THREE.Vector3(moveX, 0, moveZ);
+    if (moveDirection.lengthSq() > 0.01) {
+      moveDirection.normalize().applyEuler(cameraRotation).multiplyScalar(12);
+      const angle = Math.atan2(moveDirection.x, moveDirection.z);
       groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, angle, 0.2);
     }
     
     bodyRef.current.setLinvel({ 
-        x: THREE.MathUtils.lerp(linvel.x, direction.x, 0.3), 
+        x: THREE.MathUtils.lerp(linvel.x, moveDirection.x, 0.3), 
         y: linvel.y, 
-        z: THREE.MathUtils.lerp(linvel.z, direction.z, 0.3) 
+        z: THREE.MathUtils.lerp(linvel.z, moveDirection.z, 0.3) 
     }, true);
 
     if (jumpInput && Math.abs(linvel.y) < 0.1 && pos.y < 1.5) {
-       bodyRef.current.setLinvel({ x: linvel.x, y: 15, z: linvel.z }, true);
+       bodyRef.current.setLinvel({ x: linvel.x, y: 16, z: linvel.z }, true);
     }
 
     const t = state.clock.elapsedTime;
-    if (direction.lengthSq() > 0.1) {
+    if (moveDirection.lengthSq() > 0.1) {
       leftArm.current.rotation.x = Math.sin(t * 15) * 0.8;
       rightArm.current.rotation.x = Math.sin(t * 15 + Math.PI) * 0.8;
       leftLeg.current.rotation.x = Math.sin(t * 15 + Math.PI) * 0.6;
@@ -127,10 +115,6 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput }: any) {
              <mesh position={[0, 0, (kickRange + 0.5) / 2]}>
                <boxGeometry args={[0.15, 0.15, kickRange]} />
                <meshStandardMaterial color="#ff00ff" emissive="#ff00ff" emissiveIntensity={20} transparent opacity={0.8} />
-             </mesh>
-             <mesh position={[0, 0, 0]} rotation={[Math.PI/2, 0, 0]}>
-                <ringGeometry args={[0.5, kickRange, 32]} />
-                <meshStandardMaterial color="#ff00ff" transparent opacity={0.2} />
              </mesh>
            </group>
         )}
@@ -168,17 +152,15 @@ function Scene({ mobileInput, setScore, isMobile }: any) {
   const [kickRange, setKickRange] = useState(1.0);
   const [affirmation, setAffirmation] = useState("Holding space.");
   const [shards, setShards] = useState(() => Array.from({length: 12}).map((_, i) => ({
-    id: i, position: [(Math.random() - 0.5) * 150, 1.5, (Math.random() - 0.5) * 150] as [number, number, number]
+    id: i, position: [(Math.random() - 0.5) * 200, 1.5, (Math.random() - 0.5) * 200] as [number, number, number]
   })));
   const vessels = useRef(Array.from({length: 20}).map((_, i) => ({
-    id: i,
-    position: [(Math.random() - 0.5) * 200, 2, (Math.random() - 0.5) * 200] as [number, number, number],
+    id: i, position: [(Math.random() - 0.5) * 300, 2, (Math.random() - 0.5) * 300] as [number, number, number],
     message: GASLIGHT_RHETORIC[Math.floor(Math.random() * GASLIGHT_RHETORIC.length)],
   })));
   const creepRefs = useRef(new Map());
   const playerPosRef = useRef(new THREE.Vector3());
-  const camSmooth = useRef(new THREE.Vector3(0, 5, 10)); 
-  const lookSmooth = useRef(new THREE.Vector3(0, 0, 0));
+  const controlsRef = useRef<any>(null);
 
   const handleAttack = (playerPos: any) => {
     creepRefs.current.forEach((ref) => {
@@ -186,9 +168,7 @@ function Scene({ mobileInput, setScore, isMobile }: any) {
         const enemyPos = ref.translation();
         const dist = new THREE.Vector3().subVectors(enemyPos, playerPos).length();
         if (dist < kickRange + 3.0) {
-          const impulse = new THREE.Vector3().subVectors(enemyPos, playerPos).normalize().multiplyScalar(180);
-          impulse.y = 100; 
-          ref.applyImpulse(impulse, true);
+          ref.applyImpulse(new THREE.Vector3().subVectors(enemyPos, playerPos).normalize().multiplyScalar(200).add(new THREE.Vector3(0, 100, 0)), true);
           setScore((s: number) => s + 1);
           setAffirmation(THERAPY_AFFIRMATIONS[Math.floor(Math.random() * THERAPY_AFFIRMATIONS.length)]);
         }
@@ -196,15 +176,10 @@ function Scene({ mobileInput, setScore, isMobile }: any) {
     });
   };
 
-  useFrame((state) => {
-    if (playerPosRef.current) {
-      const pPos = playerPosRef.current;
-      const idealOffset = new THREE.Vector3(0, 4, 8); 
-      const idealLook = pPos.clone().add(new THREE.Vector3(0, 1, 0));
-      camSmooth.current.lerp(pPos.clone().add(idealOffset), 0.05);
-      state.camera.position.copy(camSmooth.current);
-      lookSmooth.current.lerp(idealLook, 0.1);
-      state.camera.lookAt(lookSmooth.current);
+  useFrame(() => {
+    if (playerPosRef.current && controlsRef.current) {
+      controlsRef.current.target.lerp(playerPosRef.current.clone().add(new THREE.Vector3(0, 1.5, 0)), 0.1);
+      controlsRef.current.update();
     }
   });
 
@@ -234,12 +209,15 @@ function Scene({ mobileInput, setScore, isMobile }: any) {
         </RigidBody>
       </Physics>
       
-      {!isMobile && <PointerLockControls />}
-      {isMobile && <OrbitControls enablePan={false} enableZoom={true} maxPolarAngle={Math.PI / 2.2} makeDefault />}
+      {isMobile ? (
+          <OrbitControls ref={controlsRef} enablePan={false} enableZoom={true} minDistance={10} maxDistance={40} makeDefault />
+      ) : (
+          <PointerLockControls ref={controlsRef} />
+      )}
 
       <Html fullscreen zIndexRange={[100, 0]}>
          <div className="ui-overlay" style={{ pointerEvents: 'none' }}>
-           <p style={{color: 'var(--pixels-green)', fontSize: '14px', marginBottom: '10px'}}>{affirmation.toUpperCase()}</p>
+           <p style={{color: 'var(--pixels-green)', fontSize: '14px'}}>{affirmation.toUpperCase()}</p>
          </div>
       </Html>
     </>
@@ -254,8 +232,7 @@ function App() {
   const joystickRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const checkMobile = () => setIsMobile(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
-    checkMobile();
+    setIsMobile(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
     const prevent = (e: TouchEvent) => { if (e.touches.length > 1) e.preventDefault(); };
     document.addEventListener('touchstart', prevent, { passive: false });
     document.addEventListener('pointerlockchange', () => setIsLocked(!!document.pointerLockElement));
@@ -265,10 +242,8 @@ function App() {
   const handleJoystick = (e: any) => {
       if (!joystickRef.current) return;
       const rect = joystickRef.current.getBoundingClientRect();
-      const centerX = rect.left + rect.width / 2;
-      const centerY = rect.top + rect.height / 2;
-      const x = (e.clientX - centerX) / (rect.width / 2);
-      const y = (e.clientY - centerY) / (rect.height / 2);
+      const x = ((e.clientX || e.touches?.[0]?.clientX) - (rect.left + rect.width / 2)) / (rect.width / 2);
+      const y = ((e.clientY || e.touches?.[0]?.clientY) - (rect.top + rect.height / 2)) / (rect.height / 2);
       mobileInput.current.x = Math.max(-1, Math.min(1, x));
       mobileInput.current.y = Math.max(-1, Math.min(1, y));
   };
@@ -276,46 +251,38 @@ function App() {
   const resetJoystick = () => { mobileInput.current.x = 0; mobileInput.current.y = 0; };
 
   return (
-    <div className="quest-container">
-      {(!isLocked && !isMobile) && (
-          <div className="capture-overlay" onClick={() => document.body.requestPointerLock()}>
-              <p>CLICK TO CAPTURE SIGNAL</p>
-              <span>[ 3RD_PERSON_ACTIVE ]</span>
-          </div>
-      )}
-      
-      <KeyboardControls map={keyboardMap}>
+    <KeyboardControls map={keyboardMap}>
+      <div className="quest-container">
+        {(!isLocked && !isMobile) && (
+            <div className="capture-overlay" onClick={() => document.body.requestPointerLock()}>
+                <p>CLICK TO CAPTURE SIGNAL</p>
+                <span>[ 3RD_PERSON_ACTIVE ]</span>
+            </div>
+        )}
+        
         <Canvas shadows dpr={[1, 2]}>
-          <PerspectiveCamera makeDefault position={[0, 5, 10]} fov={45} />
+          <PerspectiveCamera makeDefault position={[0, 8, 15]} fov={40} />
           <Scene mobileInput={mobileInput} setScore={setScore} isMobile={isMobile} />
         </Canvas>
-      </KeyboardControls>
-      
-      <div className="ui-header">
-           <h1>PARADA.QUEST</h1>
-           <div className="integration-bar"><div className="fill" style={{ width: `${Math.min(100, score * 5)}%` }}></div></div>
-           <div className="score-text">EMOTIONAL_INTEGRATION: {score}</div>
-      </div>
+        
+        <div className="ui-header">
+             <h1>PARADA.QUEST</h1>
+             <div className="integration-bar"><div className="fill" style={{ width: `${Math.min(100, score * 5)}%` }}></div></div>
+             <div className="score-text">EMOTIONAL_INTEGRATION: {score}</div>
+        </div>
 
-      <div className="mobile-interface">
-          <div 
-            className="virtual-joystick" 
-            ref={joystickRef}
-            onPointerMove={handleJoystick}
-            onPointerUp={resetJoystick}
-            onPointerLeave={resetJoystick}
-          >
-              <div className="joystick-handle" style={{ 
-                  transform: `translate(${mobileInput.current.x * 30}px, ${mobileInput.current.y * 30}px)` 
-              }}></div>
-          </div>
-          <div className="mobile-actions">
-              <button onPointerDown={() => mobileInput.current.jump = true} onPointerUp={() => mobileInput.current.jump = false} className="mob-btn">REGULATE</button>
-              <button onPointerDown={() => mobileInput.current.attack = true} onPointerUp={() => mobileInput.current.attack = false} className="mob-btn pink">HOLD_SPACE</button>
-          </div>
+        <div className="mobile-interface">
+            <div className="virtual-joystick" ref={joystickRef} onPointerMove={handleJoystick} onPointerUp={resetJoystick} onPointerLeave={resetJoystick} onTouchMove={handleJoystick} onTouchEnd={resetJoystick}>
+                <div className="joystick-handle" style={{ transform: `translate(${mobileInput.current.x * 40}px, ${mobileInput.current.y * 40}px)` }}></div>
+            </div>
+            <div className="mobile-actions">
+                <button onPointerDown={() => mobileInput.current.jump = true} onPointerUp={() => mobileInput.current.jump = false} className="mob-btn">REGULATE</button>
+                <button onPointerDown={() => mobileInput.current.attack = true} onPointerUp={() => mobileInput.current.attack = false} className="mob-btn pink">HOLD_SPACE</button>
+            </div>
+        </div>
+        <div className="crt-overlay"></div>
       </div>
-      <div className="crt-overlay"></div>
-    </div>
+    </KeyboardControls>
   )
 }
 export default App

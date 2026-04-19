@@ -189,7 +189,9 @@ function Scene({ mobileInput, setProtocol, setScore }: any) {
   })));
   const creepRefs = useRef(new Map());
   const playerPosRef = useRef(new THREE.Vector3());
-  const camSmooth = useRef(new THREE.Vector3(0, 20, 30));
+  const controlsRef = useRef<any>(null);
+  
+  // Smoothed focus target for Gravity Cam
   const lookSmooth = useRef(new THREE.Vector3(0, 0, 0));
 
   const handleAttack = (playerPos: any) => {
@@ -213,22 +215,22 @@ function Scene({ mobileInput, setProtocol, setScore }: any) {
     });
   };
 
-  useFrame((state) => {
-    if (playerPosRef.current) {
+  useFrame(() => {
+    if (playerPosRef.current && controlsRef.current) {
       const pPos = playerPosRef.current;
       let focusTarget = pPos.clone();
       
-      // Dynamic Gravity Cam Logic
+      // Gravity Cam Focus
       creepRefs.current.forEach((ref) => {
          const cPos = ref.translation();
          const dist = pPos.distanceTo(new THREE.Vector3(cPos.x, cPos.y, cPos.z));
          if (dist < 15) focusTarget.lerp(new THREE.Vector3(cPos.x, cPos.y, cPos.z), 0.4);
       });
 
-      camSmooth.current.lerp(pPos.clone().add(new THREE.Vector3(0, 20, 30)), 0.04);
-      state.camera.position.copy(camSmooth.current);
-      lookSmooth.current.lerp(focusTarget, 0.08);
-      state.camera.lookAt(lookSmooth.current);
+      // SMOOTHLY UPDATE ORBIT TARGET
+      lookSmooth.current.lerp(focusTarget, 0.1);
+      controlsRef.current.target.copy(lookSmooth.current);
+      controlsRef.current.update();
     }
   });
 
@@ -252,7 +254,6 @@ function Scene({ mobileInput, setProtocol, setScore }: any) {
           </RigidBody>
         ))}
 
-        {/* World Building Nodes */}
         <WorldNode position={[50, 0, -50]} label="GASLIGHT_BANK" color="#ffd700" />
         <WorldNode position={[-60, 0, 40]} label="ALPHA_GYM" color="#ff0000" />
         <WorldNode position={[30, 0, 70]} label="THE_BOARDROOM" color="#00ffff" />
@@ -265,6 +266,7 @@ function Scene({ mobileInput, setProtocol, setScore }: any) {
       </Physics>
 
       <OrbitControls 
+        ref={controlsRef}
         enablePan={false} 
         enableZoom={true} 
         maxPolarAngle={Math.PI / 2.2} 
@@ -314,16 +316,16 @@ function App() {
 
       <div className="mobile-controls">
           <div className="joystick-area">
-              <button onPointerDown={() => updateInput('forward', true)} className="joy-btn up">↑</button>
+              <button onPointerDown={(e) => { e.stopPropagation(); updateInput('forward', true); }} className="joy-btn up">↑</button>
               <div className="joy-row">
-                  <button onPointerDown={() => updateInput('left', true)} className="joy-btn left">←</button>
-                  <button onPointerDown={() => updateInput('right', true)} className="joy-btn right">→</button>
+                  <button onPointerDown={(e) => { e.stopPropagation(); updateInput('left', true); }} className="joy-btn left">←</button>
+                  <button onPointerDown={(e) => { e.stopPropagation(); updateInput('right', true); }} className="joy-btn right">→</button>
               </div>
-              <button onPointerDown={() => updateInput('backward', true)} className="joy-btn down">↓</button>
+              <button onPointerDown={(e) => { e.stopPropagation(); updateInput('backward', true); }} className="joy-btn down">↓</button>
           </div>
           <div className="action-area">
-              <button onPointerDown={() => updateInput('jump', true)} className="action-btn jump">REGULATE</button>
-              <button onPointerDown={() => updateInput('attack', true)} className="action-btn attack">HOLD_SPACE</button>
+              <button onPointerDown={(e) => { e.stopPropagation(); updateInput('jump', true); }} className="action-btn jump">REGULATE</button>
+              <button onPointerDown={(e) => { e.stopPropagation(); updateInput('attack', true); }} className="action-btn attack">HOLD_SPACE</button>
           </div>
       </div>
 

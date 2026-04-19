@@ -81,6 +81,7 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput, pp }: any) 
   const [, getKeys] = useKeyboardControls();
   const { camera } = useThree();
   const [isAttacking, setIsAttacking] = useState(false);
+  const attackCooldown = useRef(false);
 
   useFrame((state) => {
     if (!bodyRef.current) return;
@@ -91,10 +92,13 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput, pp }: any) 
     const linvel = bodyRef.current.linvel();
     playerPosRef.current.set(pos.x, pos.y, pos.z);
 
-    if ((keys.attack || mobileInput.current.attack) && !isAttacking && pp > 0) {
+    const wantAttack = keys.attack || mobileInput.current.attack;
+    if (wantAttack && !attackCooldown.current && pp > 0) {
        setIsAttacking(true);
+       attackCooldown.current = true;
        onAttack(pos); 
-       setTimeout(() => setIsAttacking(false), 250); 
+       setTimeout(() => setIsAttacking(false), 300);
+       setTimeout(() => attackCooldown.current = false, 600);
     }
 
     const cameraRotation = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
@@ -167,16 +171,19 @@ function ToxicVessel({ data, onHeal, playerPosRef, registerHeal }: any) {
      const pos = vesselRef.current.translation();
      const pPos = playerPosRef.current;
      const direction = new THREE.Vector3(pPos.x - pos.x, 0, pPos.z - pos.z);
+     
      const distFromOrigin = new THREE.Vector2(pos.x, pos.z).length();
      if (distFromOrigin < 12) {
         const pushAway = new THREE.Vector3(pos.x, 0, pos.z).normalize().multiplyScalar(6);
         vesselRef.current.setLinvel({ x: pushAway.x, y: 0, z: pushAway.z }, true);
         return;
      }
+
      if (direction.lengthSq() > 2) { 
         const followSpeed = data.type === 'HEAVY' ? 0.8 : 2.5;
         direction.normalize().multiplyScalar(followSpeed);
         vesselRef.current.setLinvel({ x: direction.x, y: 0, z: direction.z }, true);
+        vesselRef.current.setRotation(new THREE.Quaternion().setFromEuler(new THREE.Euler(0, Math.atan2(pPos.x - pos.x, pPos.z - pos.z), 0)), true);
      }
   });
 
@@ -187,10 +194,10 @@ function ToxicVessel({ data, onHeal, playerPosRef, registerHeal }: any) {
      onHeal();
   };
 
-  useEffect(() => { registerHeal(data.id, triggerHeal); }, []);
+  useEffect(() => { registerHeal(data.id, triggerHeal, vesselRef); }, []);
 
   return (
-    <RigidBody ref={vesselRef} position={data.position} colliders="cuboid" lockRotations mass={isHealed ? 1 : 4}>
+    <RigidBody ref={vesselRef} position={data.position} colliders="cuboid" lockRotations mass={isHealed ? 1 : 4} type={isHealed ? "fixed" : "dynamic"}>
       {!isHealed ? (
         <group>
           <mesh position={[0, 0.4, 0]} castShadow><boxGeometry args={[data.type === 'HEAVY' ? 1 : 0.7, 1.2, 0.5]} /><meshStandardMaterial color={data.type === 'HEAVY' ? "#300" : "#111"} /></mesh>
@@ -218,16 +225,18 @@ function Scene({ mobileInput, setScore, setPP, pp }: any) {
     position: [(Math.random() - 0.5) * 600, 2, (Math.random() - 0.5) * 600] as [number, number, number],
     message: TOXIC_PHRASES[Math.floor(Math.random() * TOXIC_PHRASES.length)],
   })));
-  const healMap = useRef<any>(new Map());
+  const healMap = useRef(new Map());
+  const creepPhysicsRefs = useRef(new Map());
   const playerPosRef = useRef(new THREE.Vector3());
   const orbitRef = useRef<any>(null);
 
-  const handleAttack = (playerPos: any) => {
+  const handleAttack = (playerPos: THREE.Vector3) => {
      setAffirmation("HANDSHAKE_ACTIVE");
-     vessels.current.forEach((v) => {
-        const vPos = new THREE.Vector3(...v.position);
-        if (playerPos.distanceTo(vPos) < kickRange + 3) {
-            const trigger = healMap.current.get(v.id);
+     creepPhysicsRefs.current.forEach((ref, id) => {
+        if (!ref) return;
+        const vPos = ref.translation();
+        if (playerPos.distanceTo(new THREE.Vector3(vPos.x, vPos.y, vPos.z)) < kickRange + 2.5) {
+            const trigger = healMap.current.get(id);
             if (trigger) trigger();
         }
      });
@@ -249,7 +258,7 @@ function Scene({ mobileInput, setScore, setPP, pp }: any) {
       <Physics gravity={[0, -45, 0]}>
         <KarateMan onAttack={handleAttack} playerPosRef={playerPosRef} kickRange={kickRange} mobileInput={mobileInput} pp={pp} />
         {vessels.current.map((v) => (
-          <ToxicVessel key={v.id} data={v} playerPosRef={playerPosRef} registerHeal={(id: any, fn: any) => healMap.current.set(id, fn)} onHeal={() => { setScore((s:any) => s + 1); setPP((prev: any) => Math.min(100, prev + 15)); }} />
+          <ToxicVessel key={v.id} data={v} playerPosRef={playerPosRef} registerHeal={(id: any, trigger: any, ref: any) => { healMap.current.set(id, trigger); creepPhysicsRefs.current.set(id, ref); }} onHeal={() => { setScore((s:any) => s + 1); setPP((prev: any) => Math.min(100, prev + 15)); }} />
         ))}
         <Dojo position={[0, -0.5, 0]} />
         <Muse position={[40, 2, 40]} onWisdom={() => {

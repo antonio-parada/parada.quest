@@ -6,29 +6,16 @@ import * as THREE from 'three'
 import './App.css'
 
 const TOXIC_PHRASES = [
-  "You'd be prettier if you smiled.",
-  "I'm actually a really nice guy.",
-  "Do you know who I am?",
-  "I can help your career, if you're nice.",
-  "Don't be like that, babe.",
-  "I'm just giving you a compliment.",
-  "You're making a scene.",
-  "I'm the one paying for this.",
-  "You're lucky I'm even talking to you.",
-  "It's just a joke, stop being so PC.",
-  "I'm a high-value male, respect that.",
-  "Market disruption requires sacrifice."
+  "You'd be prettier if you smiled.", "I'm actually a really nice guy.", "Do you know who I am?",
+  "I can help your career, if you're nice.", "Don't be like that, babe.", "I'm just giving you a compliment.",
+  "You're making a scene.", "I'm the one paying for this.", "You're lucky I'm even talking to you.",
+  "It's just a joke, stop being so PC.", "I'm a high-value male, respect that.", "Market disruption requires sacrifice."
 ];
 
 const THERAPY_AFFIRMATIONS = [
-  "My boundaries are a safe house.",
-  "I am reparenting this signal.",
-  "Regulating the nervous system.",
-  "Holding space for the quiet.",
-  "Honoring my needs.",
-  "Integration complete.",
-  "I am enough.",
-  "Safe and sound."
+  "My boundaries are a safe house.", "I am reparenting this signal.", "Regulating the nervous system.",
+  "Holding space for the quiet.", "Honoring my needs.", "Integration complete.", "I am enough.", "Safe and sound.",
+  "Embodying the rhythm.", "Somatic release active.", "Joy is a boundary.", "Dancing through the noise."
 ];
 
 const keyboardMap = [
@@ -56,20 +43,67 @@ function WorldNode({ position, label, color, scale = [1,1,1] }: any) {
     );
 }
 
+function BouncePad({ position, onBounce }: any) {
+  return (
+    <RigidBody 
+      type="fixed" 
+      position={position} 
+      sensor 
+      onIntersectionEnter={(e) => {
+        if (e.other.rigidBodyObject?.name === "karate-man") {
+            onBounce();
+            const impulse = { x: 0, y: 35, z: 0 };
+            e.other.rigidBody?.applyImpulse(impulse, true);
+        }
+      }}
+    >
+      <mesh castShadow>
+        <cylinderGeometry args={[2, 2.2, 0.5, 8]} />
+        <meshStandardMaterial color="#ff00ff" emissive="#ff00ff" emissiveIntensity={2} />
+      </mesh>
+      <Text position={[0, 0.6, 0]} fontSize={0.4} color="#fff" rotation={[-Math.PI/2, 0, 0]}>LAUNCH_PAD</Text>
+    </RigidBody>
+  );
+}
+
+function DanceFloor({ position }: any) {
+  const meshRef = useRef<any>(null);
+  useFrame((state) => {
+    const t = state.clock.elapsedTime;
+    if (meshRef.current) {
+        meshRef.current.material.color.setHSL((t * 0.2) % 1, 0.8, 0.5);
+        meshRef.current.material.emissive.setHSL((t * 0.2) % 1, 0.8, 0.2);
+    }
+  });
+
+  return (
+    <group position={position}>
+      <mesh ref={meshRef} receiveShadow rotation={[-Math.PI/2, 0, 0]}>
+        <planeGeometry args={[30, 30]} />
+        <meshStandardMaterial transparent opacity={0.8} />
+      </mesh>
+      <gridHelper args={[30, 10, "#fff", "#fff"]} position={[0, 0.01, 0]} />
+      <Text position={[0, 0.1, 16]} fontSize={1} color="#fff">SOMATIC_RELEASE_ZONE</Text>
+    </group>
+  );
+}
+
 function Dojo({ position }: any) {
     return (
-      <RigidBody type="fixed" position={position}>
-        <mesh castShadow>
-          <boxGeometry args={[15, 1, 15]} />
-          <meshStandardMaterial color="#111" />
-        </mesh>
-        <mesh position={[0, 4, 0]} castShadow>
-          <boxGeometry args={[14, 8, 14]} />
-          <meshStandardMaterial color="#0a0a0a" transparent opacity={0.3} />
+      <group position={position}>
+        <RigidBody type="fixed">
+          <mesh castShadow>
+            <boxGeometry args={[20, 1, 20]} />
+            <meshStandardMaterial color="#111" />
+          </mesh>
+        </RigidBody>
+        <mesh position={[0, 4, 0]}>
+          <boxGeometry args={[19, 8, 19]} />
+          <meshStandardMaterial color="#00ff00" transparent opacity={0.05} wireframe />
         </mesh>
         <Text position={[0, 9, 0]} fontSize={1.2} color="#00ff00">RESILIENCE_DOJO [SAFE_ZONE]</Text>
-        <gridHelper args={[15, 15, "#00ff00", "#00ff00"]} position={[0, 0.51, 0]} />
-      </RigidBody>
+        <gridHelper args={[20, 10, "#00ff00", "#00ff00"]} position={[0, 0.51, 0]} />
+      </group>
     );
 }
 
@@ -95,7 +129,7 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput, pp }: any) 
 
     if ((keys.attack || mobileInput.current.attack) && !isAttacking && pp > 0) {
        setIsAttacking(true);
-       onAttack(pos); 
+       onAttack(); 
        setTimeout(() => setIsAttacking(false), 250); 
     }
 
@@ -106,8 +140,7 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput, pp }: any) 
 
     if (moveDirection.lengthSq() > 0.01) {
       moveDirection.normalize().applyEuler(cameraRotation).multiplyScalar(currentSpeed);
-      const angle = Math.atan2(moveDirection.x, moveDirection.z);
-      groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, angle, 0.2);
+      groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, Math.atan2(moveDirection.x, moveDirection.z), 0.2);
     }
     
     bodyRef.current.setLinvel({ 
@@ -130,7 +163,7 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput, pp }: any) 
   });
 
   return (
-    <RigidBody ref={bodyRef} position={[0, 2, 0]} colliders="cuboid" lockRotations mass={1} friction={2}>
+    <RigidBody name="karate-man" ref={bodyRef} position={[0, 2, 0]} colliders="cuboid" lockRotations mass={1} friction={2}>
       <group ref={groupRef}>
         <mesh position={[0, 0.3, 0]} castShadow><boxGeometry args={[0.7, 0.9, 0.5]} /><meshStandardMaterial color="#fff" /></mesh>
         <mesh position={[0, 0, 0]} castShadow><boxGeometry args={[0.75, 0.15, 0.55]} /><meshStandardMaterial color="#000" /></mesh>
@@ -150,10 +183,6 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput, pp }: any) 
                <boxGeometry args={[0.15, 0.15, kickRange]} />
                <meshStandardMaterial color="#ff00ff" emissive="#ff00ff" emissiveIntensity={20} transparent opacity={0.8} />
              </mesh>
-             <mesh position={[0, 0, 0]} rotation={[Math.PI/2, 0, 0]}>
-                <ringGeometry args={[0.5, kickRange, 32]} />
-                <meshStandardMaterial color="#ff00ff" transparent opacity={0.2} />
-             </mesh>
            </group>
         )}
       </group>
@@ -171,7 +200,6 @@ function ToxicVessel({ data, onHeal, playerPosRef, creepRef }: any) {
      const pos = vesselRef.current.translation();
      const pPos = playerPosRef.current;
      const direction = new THREE.Vector3(pPos.x - pos.x, 0, pPos.z - pos.z);
-     
      if (direction.lengthSq() > 2) { 
         const followSpeed = data.type === 'HEAVY' ? 0.8 : 2.5;
         direction.normalize().multiplyScalar(followSpeed);
@@ -199,17 +227,10 @@ function ToxicVessel({ data, onHeal, playerPosRef, creepRef }: any) {
       <group ref={modelRef}>
         {!isHealed ? (
           <>
-            <mesh position={[0, 0.4, 0]} castShadow>
-                <boxGeometry args={[data.type === 'HEAVY' ? 1 : 0.7, 1.2, 0.5]} />
-                <meshStandardMaterial color={data.type === 'HEAVY' ? "#300" : "#111"} />
-            </mesh>
+            <mesh position={[0, 0.4, 0]} castShadow><boxGeometry args={[data.type === 'HEAVY' ? 1 : 0.7, 1.2, 0.5]} /><meshStandardMaterial color={data.type === 'HEAVY' ? "#300" : "#111"} /></mesh>
             <mesh position={[0, 1.1, 0]} castShadow><boxGeometry args={[0.5, 0.5, 0.5]} /><meshStandardMaterial color="#222" /></mesh>
-            <Billboard position={[0, 2.4, 0]}>
-                <Text fontSize={0.2} color="#fff" maxWidth={2.5} textAlign="center">{data.message}</Text>
-            </Billboard>
-            <mesh visible={false} onClick={heal}>
-                <boxGeometry args={[3, 4, 3]} />
-            </mesh>
+            <Billboard position={[0, 2.4, 0]}><Text fontSize={0.2} color="#fff" maxWidth={2.5} textAlign="center">{data.message}</Text></Billboard>
+            <mesh visible={false} onClick={heal}><boxGeometry args={[3, 4, 3]} /></mesh>
           </>
         ) : (
           <group>
@@ -227,14 +248,14 @@ function ToxicVessel({ data, onHeal, playerPosRef, creepRef }: any) {
 
 function Scene({ mobileInput, setScore, setPP, pp }: any) {
   const [kickRange, setKickRange] = useState(1.0);
-  const [affirmation, setAffirmation] = useState("Holding space.");
+  const [affirmation, setAffirmation] = useState("Breathe.");
   const [shards, setShards] = useState(() => Array.from({length: 12}).map((_, i) => ({
-    id: i, position: [(Math.random() - 0.5) * 250, 1.5, (Math.random() - 0.5) * 250] as [number, number, number]
+    id: i, position: [(Math.random() - 0.5) * 400, 1.5, (Math.random() - 0.5) * 400] as [number, number, number]
   })));
-  const vessels = useRef(Array.from({length: 25}).map((_, i) => ({
+  const vessels = useRef(Array.from({length: 30}).map((_, i) => ({
     id: i,
     type: Math.random() > 0.8 ? 'HEAVY' : 'NORMAL',
-    position: [(Math.random() - 0.5) * 300, 2, (Math.random() - 0.5) * 300] as [number, number, number],
+    position: [(Math.random() - 0.5) * 500, 2, (Math.random() - 0.5) * 500] as [number, number, number],
     message: TOXIC_PHRASES[Math.floor(Math.random() * TOXIC_PHRASES.length)],
   })));
   const playerPosRef = useRef(new THREE.Vector3());
@@ -248,15 +269,13 @@ function Scene({ mobileInput, setScore, setPP, pp }: any) {
     creepRefs.current.forEach((ref) => {
         if (!ref) return;
         const cPos = ref.translation();
-        const dist = pPos.distanceTo(new THREE.Vector3(cPos.x, cPos.y, cPos.z));
-        if (dist < 6) noiseDrain += 5 * delta;
+        if (pPos.distanceTo(new THREE.Vector3(cPos.x, cPos.y, cPos.z)) < 6) noiseDrain += 8 * delta;
     });
-    const inDojo = pPos.distanceTo(new THREE.Vector3(0, 0, 0)) < 10;
-    const regen = inDojo ? 15 * delta : 0;
+    const inDojo = pPos.distanceTo(new THREE.Vector3(0, 0, 0)) < 12;
+    const inDanceFloor = pPos.distanceTo(new THREE.Vector3(40, 0, 40)) < 15;
+    const regen = (inDojo || inDanceFloor) ? 20 * delta : 0;
     setPP((prev: number) => THREE.MathUtils.clamp(prev - noiseDrain + regen, 0, 100));
-    if (orbitRef.current) {
-        orbitRef.current.target.lerp(pPos.clone().add(new THREE.Vector3(0, 1.5, 0)), 0.1);
-    }
+    if (orbitRef.current) orbitRef.current.target.lerp(pPos.clone().add(new THREE.Vector3(0, 1.5, 0)), 0.1);
   });
 
   const handleAttack = () => {
@@ -283,17 +302,20 @@ function Scene({ mobileInput, setScore, setPP, pp }: any) {
               setKickRange(prev => prev + 0.05);
               setAffirmation("CAPACITY_EXPANDED");
               setPP((prev: number) => Math.min(100, prev + 10));
-          }}>
-            <mesh castShadow><octahedronGeometry args={[0.5]} /><meshStandardMaterial color="#00ff00" emissive="#00ff00" emissiveIntensity={5} /></mesh>
-          </RigidBody>
+          }}><mesh castShadow><octahedronGeometry args={[0.5]} /><meshStandardMaterial color="#00ff00" emissive="#00ff00" emissiveIntensity={5} /></mesh></RigidBody>
         ))}
         <Dojo position={[0, 0, 0]} />
-        <WorldNode position={[80, 0, -80]} label="GASLIGHT_BANK" color="#ffd700" scale={[1.5, 2.5, 1.5]} />
-        <WorldNode position={[-100, 0, 60]} label="ALPHA_GYM" color="#ff0000" scale={[1.5, 1.5, 1.5]} />
-        <WorldNode position={[50, 0, 120]} label="LINKEDIN_LABS" color="#0077b5" scale={[1.5, 3.5, 1.5]} />
+        <DanceFloor position={[40, 0, 40]} />
+        <BouncePad position={[40, 0.5, 40]} onBounce={() => setAffirmation("EMBODYING_THE_SIGNAL")} />
+        <BouncePad position={[45, 0.5, 35]} onBounce={() => setAffirmation("SOMATIC_RELEASE")} />
+        
+        <WorldNode position={[120, 0, -120]} label="GASLIGHT_BANK" color="#ffd700" scale={[1.5, 2.5, 1.5]} />
+        <WorldNode position={[-150, 0, 100]} label="ALPHA_GYM" color="#ff0000" scale={[1.5, 1.5, 1.5]} />
+        <WorldNode position={[100, 0, 200]} label="LINKEDIN_LABS" color="#0077b5" scale={[1.5, 3.5, 1.5]} />
+
         <RigidBody type="fixed" position={[0, -1, 0]}>
           <mesh receiveShadow><boxGeometry args={[4000, 2, 4000]} /><meshStandardMaterial color="#050505" /></mesh>
-          <gridHelper args={[4000, 800, "#ff00ff", "#111"]} position={[0, 1.01, 0]} />
+          <gridHelper args={[4000, 400, "#ff00ff", "#111"]} position={[0, 1.01, 0]} />
         </RigidBody>
       </Physics>
       <OrbitControls ref={orbitRef} enablePan={false} enableZoom={true} maxPolarAngle={Math.PI / 2.2} minDistance={10} maxDistance={60} makeDefault />
@@ -314,12 +336,9 @@ function App() {
   const handleJoystick = (e: any) => {
       if (!joystickRef.current) return;
       const rect = joystickRef.current.getBoundingClientRect();
-      const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-      const clientY = e.clientY || (e.touches && e.touches[0].clientY);
-      const x = (clientX - (rect.left + rect.width / 2)) / (rect.width / 2);
-      const y = (clientY - (rect.top + rect.height / 2)) / (rect.height / 2);
-      mobileInput.current.x = Math.max(-1, Math.min(1, x));
-      mobileInput.current.y = Math.max(-1, Math.min(1, y));
+      const x = ((e.clientX || e.touches?.[0]?.clientX) - (rect.left + rect.width / 2)) / (rect.width / 2);
+      const y = ((e.clientY || e.touches?.[0]?.clientY) - (rect.top + rect.height / 2)) / (rect.height / 2);
+      mobileInput.current.x = Math.max(-1, Math.min(1, x)); mobileInput.current.y = Math.max(-1, Math.min(1, y));
   };
   const resetJoystick = () => { mobileInput.current.x = 0; mobileInput.current.y = 0; };
   return (
@@ -332,11 +351,9 @@ function App() {
         <div className="ui-header">
              <h1>PARADA.QUEST</h1>
              <div className="meter-label">PEACE_POINTS (PP)</div>
-             <div className="pp-bar">
-                 <div className="fill" style={{ width: `${pp}%`, backgroundColor: pp > 30 ? 'var(--pixels-green)' : '#ff0000' }}></div>
-             </div>
-             <div className="integration-bar"><div className="fill" style={{ width: `${Math.min(100, score * 4)}%` }}></div></div>
-             <div className="score-text">SIGNALS_INTEGRATED: {score}</div>
+             <div className="pp-bar"><div className="fill" style={{ width: `${pp}%`, backgroundColor: pp > 30 ? 'var(--pixels-green)' : '#ff0000' }}></div></div>
+             <div className="integration-bar"><div className="fill" style={{ width: `${Math.min(100, score * 3.3)}%` }}></div></div>
+             <div className="score-text">SIGNALS_HEALED: {score}/30</div>
         </div>
         <div className="mobile-interface">
             <div className="virtual-joystick" ref={joystickRef} onPointerMove={handleJoystick} onPointerUp={resetJoystick} onPointerLeave={resetJoystick} onTouchMove={handleJoystick} onTouchEnd={resetJoystick}>

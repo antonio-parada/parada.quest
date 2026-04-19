@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { Physics, RigidBody } from '@react-three/rapier'
-import { KeyboardControls, useKeyboardControls, Html, PerspectiveCamera, Text, Billboard, PointerLockControls } from '@react-three/drei'
+import { KeyboardControls, useKeyboardControls, Html, PerspectiveCamera, Text, Billboard, PointerLockControls, OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
 import './App.css'
 
@@ -119,26 +119,19 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput }: any) {
       <group ref={groupRef}>
         <mesh position={[0, 0.3, 0]} castShadow><boxGeometry args={[0.7, 0.9, 0.5]} /><meshStandardMaterial color="#fff" /></mesh>
         <mesh position={[0, 0, 0]} castShadow><boxGeometry args={[0.75, 0.15, 0.55]} /><meshStandardMaterial color="#000" /></mesh>
-        
-        {/* --- REFINED HANDSOME FACE --- */}
         <group position={[0, 1, 0.05]}>
           <mesh castShadow><boxGeometry args={[0.58, 0.48, 0.58]} /><meshStandardMaterial color="#ff00ff" /></mesh>
           <mesh position={[0, -0.15, 0.02]} castShadow><boxGeometry args={[0.5, 0.4, 0.5]} /><meshStandardMaterial color="#fdd" /></mesh>
-          {/* Eyes with Depth */}
           <mesh position={[0.12, -0.1, 0.26]}><boxGeometry args={[0.08, 0.04, 0.05]} /><meshStandardMaterial color="#000" /></mesh>
           <mesh position={[-0.12, -0.1, 0.26]}><boxGeometry args={[0.08, 0.04, 0.05]} /><meshStandardMaterial color="#000" /></mesh>
-          {/* Sharp Brows */}
           <mesh position={[0.12, -0.04, 0.27]} rotation={[0, 0, 0.1]}><boxGeometry args={[0.12, 0.02, 0.02]} /><meshStandardMaterial color="#000" /></mesh>
           <mesh position={[-0.12, -0.04, 0.27]} rotation={[0, 0, -0.1]}><boxGeometry args={[0.12, 0.02, 0.02]} /><meshStandardMaterial color="#000" /></mesh>
-          {/* Jaw / Chin Structure */}
           <mesh position={[0, -0.3, 0.1]}><boxGeometry args={[0.3, 0.1, 0.2]} /><meshStandardMaterial color="#fcc" /></mesh>
         </group>
-
         <group ref={leftArm} position={[0.45, 0.6, 0]}><mesh position={[0, -0.3, 0]} castShadow><boxGeometry args={[0.2, 0.6, 0.2]} /><meshStandardMaterial color="#fff" /></mesh></group>
         <group ref={rightArm} position={[-0.45, 0.6, 0]}><mesh position={[0, -0.3, 0]} castShadow><boxGeometry args={[0.2, 0.6, 0.2]} /><meshStandardMaterial color="#fff" /></mesh></group>
         <group ref={leftLeg} position={[0.2, -0.2, 0]}><mesh position={[0, -0.3, 0]} castShadow><boxGeometry args={[0.25, 0.6, 0.25]} /><meshStandardMaterial color="#fff" /></mesh></group>
         <group ref={rightLeg} position={[-0.2, -0.2, 0]}><mesh position={[0, -0.3, 0]} castShadow><boxGeometry args={[0.25, 0.6, 0.25]} /><meshStandardMaterial color="#fff" /></mesh></group>
-        
         {isAttacking && (
            <group>
              <mesh position={[0, 0, (kickRange + 0.5) / 2]}>
@@ -181,7 +174,7 @@ function EmotionalVessel({ data, creepRef, playerPosRef }: any) {
   );
 }
 
-function Scene({ mobileInput, setProtocol, setScore }: any) {
+function Scene({ mobileInput, setProtocol, setScore, isMobile }: any) {
   const [kickRange, setKickRange] = useState(1.0);
   const [affirmation, setAffirmation] = useState("Holding space.");
   const [shards, setShards] = useState(() => Array.from({length: 12}).map((_, i) => ({
@@ -194,7 +187,7 @@ function Scene({ mobileInput, setProtocol, setScore }: any) {
   })));
   const creepRefs = useRef(new Map());
   const playerPosRef = useRef(new THREE.Vector3());
-  const camSmooth = useRef(new THREE.Vector3(0, 20, 30));
+  const controlsRef = useRef<any>(null);
   const lookSmooth = useRef(new THREE.Vector3(0, 0, 0));
 
   const handleAttack = (playerPos: any) => {
@@ -226,10 +219,18 @@ function Scene({ mobileInput, setProtocol, setScore }: any) {
          const cPos = ref.translation();
          if (pPos.distanceTo(new THREE.Vector3(cPos.x, cPos.y, cPos.z)) < 15) focusTarget.lerp(new THREE.Vector3(cPos.x, cPos.y, cPos.z), 0.4);
       });
-      camSmooth.current.lerp(pPos.clone().add(new THREE.Vector3(0, 15, 25)), 0.05);
-      state.camera.position.copy(camSmooth.current);
-      lookSmooth.current.lerp(focusTarget, 0.08);
-      state.camera.lookAt(lookSmooth.current);
+      lookSmooth.current.lerp(focusTarget, 0.1);
+
+      if (isMobile) {
+        // AUTOMATIC CAMERA POSITION FOR MOBILE
+        const idealOffset = new THREE.Vector3(0, 15, 25);
+        state.camera.position.lerp(pPos.clone().add(idealOffset), 0.05);
+        state.camera.lookAt(lookSmooth.current);
+      } else if (controlsRef.current) {
+        // UPDATE CONTROLS TARGET FOR DESKTOP POINTER LOCK
+        controlsRef.current.target.copy(lookSmooth.current);
+        controlsRef.current.update();
+      }
     }
   });
 
@@ -261,8 +262,7 @@ function Scene({ mobileInput, setProtocol, setScore }: any) {
         </RigidBody>
       </Physics>
       
-      {/* POINTER LOCK FOR DESKTOP */}
-      <PointerLockControls />
+      {!isMobile ? <PointerLockControls ref={controlsRef} /> : <OrbitControls enablePan={false} enableZoom={true} maxPolarAngle={Math.PI / 2.2} makeDefault />}
 
       <Html fullscreen zIndexRange={[100, 0]}>
          <div className="ui-overlay" style={{ pointerEvents: 'none' }}>
@@ -277,22 +277,26 @@ function App() {
   const [score, setScore] = useState(0);
   const [protocol, setProtocol] = useState("AFFIRM_AND_VALIDATE");
   const [isLocked, setIsLocked] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const mobileInput = useRef({ forward: false, backward: false, left: false, right: false, jump: false, attack: false });
 
   const updateInput = (key: string, value: boolean) => { (mobileInput.current as any)[key] = value; };
   const resetAllInput = () => { mobileInput.current = { forward: false, backward: false, left: false, right: false, jump: false, attack: false }; };
 
   useEffect(() => {
+    // Detect mobile
+    const checkMobile = () => {
+        setIsMobile(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
+    };
+    checkMobile();
+
     const prevent = (e: TouchEvent) => { if (e.touches.length > 1) e.preventDefault(); };
     document.addEventListener('touchstart', prevent, { passive: false });
     window.addEventListener('pointerup', resetAllInput);
     window.addEventListener('blur', resetAllInput);
     
-    const onLock = () => setIsLocked(true);
-    const onUnlock = () => setIsLocked(false);
     document.addEventListener('pointerlockchange', () => {
-        if (document.pointerLockElement) onLock();
-        else onUnlock();
+        setIsLocked(!!document.pointerLockElement);
     });
 
     return () => { 
@@ -304,7 +308,7 @@ function App() {
 
   return (
     <div className="quest-container">
-      {!isLocked && (
+      {(!isLocked && !isMobile) && (
           <div className="capture-overlay" onClick={() => document.body.requestPointerLock()}>
               <p>CLICK TO CAPTURE SIGNAL</p>
               <span>[ MOUSE_LOOK_ACTIVE ]</span>
@@ -314,7 +318,7 @@ function App() {
       <KeyboardControls map={keyboardMap}>
         <Canvas shadows dpr={[1, 2]}>
           <PerspectiveCamera makeDefault position={[0, 40, 60]} fov={35} />
-          <Scene mobileInput={mobileInput} setProtocol={setProtocol} setScore={setScore} />
+          <Scene mobileInput={mobileInput} setProtocol={setProtocol} setScore={setScore} isMobile={isMobile} />
         </Canvas>
       </KeyboardControls>
       
@@ -339,7 +343,6 @@ function App() {
               <button onPointerDown={(e) => { e.stopPropagation(); updateInput('attack', true); }} className="action-btn attack">HOLD_SPACE</button>
           </div>
       </div>
-
       <div className="crt-overlay"></div>
     </div>
   )

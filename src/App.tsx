@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { Physics, RigidBody } from '@react-three/rapier'
-import { KeyboardControls, useKeyboardControls, Html, PerspectiveCamera, Text, Billboard, OrbitControls } from '@react-three/drei'
+import { KeyboardControls, useKeyboardControls, Html, PerspectiveCamera, Text, Billboard, PointerLockControls } from '@react-three/drei'
 import * as THREE from 'three'
 import './App.css'
 
@@ -78,21 +78,14 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput }: any) {
        setTimeout(() => setIsAttacking(false), 250); 
     }
 
-    // CAMERA RELATIVE CALCULATION
     const direction = new THREE.Vector3();
     const frontVector = new THREE.Vector3(0, 0, (input.backward ? 1 : 0) - (input.forward ? 1 : 0));
     const sideVector = new THREE.Vector3((input.left ? 1 : 0) - (input.right ? 1 : 0), 0, 0);
 
-    // Get camera yaw
     const cameraRotation = new THREE.Euler().setFromQuaternion(state.camera.quaternion, 'YXZ');
-    cameraRotation.x = 0; // Lock to horizontal plane
-    cameraRotation.z = 0;
+    cameraRotation.x = 0; cameraRotation.z = 0;
 
-    direction
-      .subVectors(frontVector, sideVector)
-      .normalize()
-      .multiplyScalar(12)
-      .applyEuler(cameraRotation);
+    direction.subVectors(frontVector, sideVector).normalize().multiplyScalar(12).applyEuler(cameraRotation);
 
     const isMoving = input.forward || input.backward || input.left || input.right;
     if (isMoving) {
@@ -126,16 +119,26 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput }: any) {
       <group ref={groupRef}>
         <mesh position={[0, 0.3, 0]} castShadow><boxGeometry args={[0.7, 0.9, 0.5]} /><meshStandardMaterial color="#fff" /></mesh>
         <mesh position={[0, 0, 0]} castShadow><boxGeometry args={[0.75, 0.15, 0.55]} /><meshStandardMaterial color="#000" /></mesh>
+        
+        {/* --- REFINED HANDSOME FACE --- */}
         <group position={[0, 1, 0.05]}>
           <mesh castShadow><boxGeometry args={[0.58, 0.48, 0.58]} /><meshStandardMaterial color="#ff00ff" /></mesh>
           <mesh position={[0, -0.15, 0.02]} castShadow><boxGeometry args={[0.5, 0.4, 0.5]} /><meshStandardMaterial color="#fdd" /></mesh>
-          <mesh position={[0.12, -0.1, 0.26]}><boxGeometry args={[0.07, 0.04, 0.04]} /><meshStandardMaterial color="#000" /></mesh>
-          <mesh position={[-0.12, -0.1, 0.26]}><boxGeometry args={[0.07, 0.04, 0.04]} /><meshStandardMaterial color="#000" /></mesh>
+          {/* Eyes with Depth */}
+          <mesh position={[0.12, -0.1, 0.26]}><boxGeometry args={[0.08, 0.04, 0.05]} /><meshStandardMaterial color="#000" /></mesh>
+          <mesh position={[-0.12, -0.1, 0.26]}><boxGeometry args={[0.08, 0.04, 0.05]} /><meshStandardMaterial color="#000" /></mesh>
+          {/* Sharp Brows */}
+          <mesh position={[0.12, -0.04, 0.27]} rotation={[0, 0, 0.1]}><boxGeometry args={[0.12, 0.02, 0.02]} /><meshStandardMaterial color="#000" /></mesh>
+          <mesh position={[-0.12, -0.04, 0.27]} rotation={[0, 0, -0.1]}><boxGeometry args={[0.12, 0.02, 0.02]} /><meshStandardMaterial color="#000" /></mesh>
+          {/* Jaw / Chin Structure */}
+          <mesh position={[0, -0.3, 0.1]}><boxGeometry args={[0.3, 0.1, 0.2]} /><meshStandardMaterial color="#fcc" /></mesh>
         </group>
+
         <group ref={leftArm} position={[0.45, 0.6, 0]}><mesh position={[0, -0.3, 0]} castShadow><boxGeometry args={[0.2, 0.6, 0.2]} /><meshStandardMaterial color="#fff" /></mesh></group>
         <group ref={rightArm} position={[-0.45, 0.6, 0]}><mesh position={[0, -0.3, 0]} castShadow><boxGeometry args={[0.2, 0.6, 0.2]} /><meshStandardMaterial color="#fff" /></mesh></group>
         <group ref={leftLeg} position={[0.2, -0.2, 0]}><mesh position={[0, -0.3, 0]} castShadow><boxGeometry args={[0.25, 0.6, 0.25]} /><meshStandardMaterial color="#fff" /></mesh></group>
         <group ref={rightLeg} position={[-0.2, -0.2, 0]}><mesh position={[0, -0.3, 0]} castShadow><boxGeometry args={[0.25, 0.6, 0.25]} /><meshStandardMaterial color="#fff" /></mesh></group>
+        
         {isAttacking && (
            <group>
              <mesh position={[0, 0, (kickRange + 0.5) / 2]}>
@@ -172,9 +175,7 @@ function EmotionalVessel({ data, creepRef, playerPosRef }: any) {
       <group ref={modelRef}>
         <mesh position={[0, 0.4, 0]} castShadow><boxGeometry args={[0.7, 1.2, 0.5]} /><meshStandardMaterial color="#111" /></mesh>
         <mesh position={[0, 1.1, 0]} castShadow><boxGeometry args={[0.5, 0.5, 0.5]} /><meshStandardMaterial color="#222" /></mesh>
-        <Billboard position={[0, 2.2, 0]}>
-            <Text fontSize={0.2} color="#fff" maxWidth={2} textAlign="center">{data.message}</Text>
-        </Billboard>
+        <Billboard position={[0, 2.2, 0]}><Text fontSize={0.2} color="#fff" maxWidth={2} textAlign="center">{data.message}</Text></Billboard>
       </group>
     </RigidBody>
   );
@@ -193,7 +194,7 @@ function Scene({ mobileInput, setProtocol, setScore }: any) {
   })));
   const creepRefs = useRef(new Map());
   const playerPosRef = useRef(new THREE.Vector3());
-  const controlsRef = useRef<any>(null);
+  const camSmooth = useRef(new THREE.Vector3(0, 20, 30));
   const lookSmooth = useRef(new THREE.Vector3(0, 0, 0));
 
   const handleAttack = (playerPos: any) => {
@@ -217,17 +218,18 @@ function Scene({ mobileInput, setProtocol, setScore }: any) {
     });
   };
 
-  useFrame(() => {
-    if (playerPosRef.current && controlsRef.current) {
+  useFrame((state) => {
+    if (playerPosRef.current) {
       const pPos = playerPosRef.current;
       let focusTarget = pPos.clone();
       creepRefs.current.forEach((ref) => {
          const cPos = ref.translation();
          if (pPos.distanceTo(new THREE.Vector3(cPos.x, cPos.y, cPos.z)) < 15) focusTarget.lerp(new THREE.Vector3(cPos.x, cPos.y, cPos.z), 0.4);
       });
-      lookSmooth.current.lerp(focusTarget, 0.1);
-      controlsRef.current.target.copy(lookSmooth.current);
-      controlsRef.current.update();
+      camSmooth.current.lerp(pPos.clone().add(new THREE.Vector3(0, 15, 25)), 0.05);
+      state.camera.position.copy(camSmooth.current);
+      lookSmooth.current.lerp(focusTarget, 0.08);
+      state.camera.lookAt(lookSmooth.current);
     }
   });
 
@@ -258,7 +260,10 @@ function Scene({ mobileInput, setProtocol, setScore }: any) {
           <gridHelper args={[2000, 400, "#ff00ff", "#111"]} position={[0, 1.01, 0]} />
         </RigidBody>
       </Physics>
-      <OrbitControls ref={controlsRef} enablePan={false} maxPolarAngle={Math.PI / 2.2} minDistance={15} maxDistance={100} makeDefault />
+      
+      {/* POINTER LOCK FOR DESKTOP */}
+      <PointerLockControls />
+
       <Html fullscreen zIndexRange={[100, 0]}>
          <div className="ui-overlay" style={{ pointerEvents: 'none' }}>
            <p style={{color: 'var(--pixels-green)', fontSize: '14px', marginBottom: '10px'}}>{affirmation.toUpperCase()}</p>
@@ -271,17 +276,25 @@ function Scene({ mobileInput, setProtocol, setScore }: any) {
 function App() {
   const [score, setScore] = useState(0);
   const [protocol, setProtocol] = useState("AFFIRM_AND_VALIDATE");
+  const [isLocked, setIsLocked] = useState(false);
   const mobileInput = useRef({ forward: false, backward: false, left: false, right: false, jump: false, attack: false });
 
   const updateInput = (key: string, value: boolean) => { (mobileInput.current as any)[key] = value; };
   const resetAllInput = () => { mobileInput.current = { forward: false, backward: false, left: false, right: false, jump: false, attack: false }; };
 
   useEffect(() => {
-    // PREVENT IOS ZOOM & SCROLL
     const prevent = (e: TouchEvent) => { if (e.touches.length > 1) e.preventDefault(); };
     document.addEventListener('touchstart', prevent, { passive: false });
     window.addEventListener('pointerup', resetAllInput);
     window.addEventListener('blur', resetAllInput);
+    
+    const onLock = () => setIsLocked(true);
+    const onUnlock = () => setIsLocked(false);
+    document.addEventListener('pointerlockchange', () => {
+        if (document.pointerLockElement) onLock();
+        else onUnlock();
+    });
+
     return () => { 
         document.removeEventListener('touchstart', prevent);
         window.removeEventListener('pointerup', resetAllInput); 
@@ -291,6 +304,13 @@ function App() {
 
   return (
     <div className="quest-container">
+      {!isLocked && (
+          <div className="capture-overlay" onClick={() => document.body.requestPointerLock()}>
+              <p>CLICK TO CAPTURE SIGNAL</p>
+              <span>[ MOUSE_LOOK_ACTIVE ]</span>
+          </div>
+      )}
+      
       <KeyboardControls map={keyboardMap}>
         <Canvas shadows dpr={[1, 2]}>
           <PerspectiveCamera makeDefault position={[0, 40, 60]} fov={35} />

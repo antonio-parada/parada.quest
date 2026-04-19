@@ -8,14 +8,13 @@ import './App.css'
 const TOXIC_PHRASES = [
   "You'd be prettier if you smiled.", "I'm actually a really nice guy.", "Do you know who I am?",
   "I can help your career, if you're nice.", "Don't be like that, babe.", "I'm just giving you a compliment.",
-  "You're making a scene.", "I'm the one paying for this.", "You're lucky I'm even talking to you.",
-  "It's just a joke, stop being so PC.", "I'm a high-value male, respect that.", "Market disruption requires sacrifice."
+  "You're making a scene.", "I'm the one paying for this.", "You're lucky I'm even talking to you."
 ];
 
-const THERAPY_AFFIRMATIONS = [
-  "My boundaries are a safe house.", "I am reparenting this signal.", "Regulating the nervous system.",
-  "Holding space for the quiet.", "Honoring my needs.", "Integration complete.", "I am enough.", "Safe and sound.",
-  "Embodying the rhythm.", "Somatic release active.", "Joy is a boundary.", "Dancing through the noise."
+const DIVINE_WISDOM = [
+  "Wisdom is a shared breath.", "Softness is the ultimate armor.", "Transcribing the quiet.",
+  "You are a vessel of light.", "Honoring the lineage of peace.", "The muse is the mirror.",
+  "Spirituality is disciplined empathy."
 ];
 
 const keyboardMap = [
@@ -27,6 +26,29 @@ const keyboardMap = [
   { name: "attack", keys: ["k", "K", "Enter"] },
 ];
 
+function Muse({ position, onWisdom }: any) {
+  return (
+    <group position={position}>
+      <Float speed={3} rotationIntensity={0.5} floatIntensity={1}>
+        <mesh castShadow>
+          <torusKnotGeometry args={[1, 0.3, 100, 16]} />
+          <meshStandardMaterial color="#ffd700" emissive="#ffd700" emissiveIntensity={2} transparent opacity={0.8} />
+        </mesh>
+        <mesh position={[0, 0, 0]}>
+           <capsuleGeometry args={[0.5, 2, 8, 16]} />
+           <meshStandardMaterial color="#fff" transparent opacity={0.3} wireframe />
+        </mesh>
+        <Billboard position={[0, 2.5, 0]}>
+           <Text fontSize={0.4} color="#ffd700">DIVINE_FEMININE_WISDOM</Text>
+        </Billboard>
+        <RigidBody type="fixed" sensor onIntersectionEnter={onWisdom}>
+           <mesh visible={false}><sphereGeometry args={[3]} /></mesh>
+        </RigidBody>
+      </Float>
+    </group>
+  );
+}
+
 function WorldNode({ position, label, color, scale = [1,1,1] }: any) {
     return (
       <RigidBody type="fixed" position={position}>
@@ -35,57 +57,8 @@ function WorldNode({ position, label, color, scale = [1,1,1] }: any) {
           <meshStandardMaterial color="#0a0a0a" />
         </mesh>
         <Text position={[0, 9 * scale[1], 0]} fontSize={1} color={color}>{label}</Text>
-        <mesh position={[0, 0, 5.1 * scale[2]]}>
-           <boxGeometry args={[4, 6, 0.2]} />
-           <meshStandardMaterial color={color} emissive={color} emissiveIntensity={0.5} />
-        </mesh>
       </RigidBody>
     );
-}
-
-function BouncePad({ position, onBounce }: any) {
-  return (
-    <RigidBody 
-      type="fixed" 
-      position={position} 
-      sensor 
-      onIntersectionEnter={(e) => {
-        if (e.other.rigidBodyObject?.name === "karate-man") {
-            onBounce();
-            const impulse = { x: 0, y: 35, z: 0 };
-            e.other.rigidBody?.applyImpulse(impulse, true);
-        }
-      }}
-    >
-      <mesh castShadow>
-        <cylinderGeometry args={[2, 2.2, 0.5, 8]} />
-        <meshStandardMaterial color="#ff00ff" emissive="#ff00ff" emissiveIntensity={2} />
-      </mesh>
-      <Text position={[0, 0.6, 0]} fontSize={0.4} color="#fff" rotation={[-Math.PI/2, 0, 0]}>LAUNCH_PAD</Text>
-    </RigidBody>
-  );
-}
-
-function DanceFloor({ position }: any) {
-  const meshRef = useRef<any>(null);
-  useFrame((state) => {
-    const t = state.clock.elapsedTime;
-    if (meshRef.current) {
-        meshRef.current.material.color.setHSL((t * 0.2) % 1, 0.8, 0.5);
-        meshRef.current.material.emissive.setHSL((t * 0.2) % 1, 0.8, 0.2);
-    }
-  });
-
-  return (
-    <group position={position}>
-      <mesh ref={meshRef} receiveShadow rotation={[-Math.PI/2, 0, 0]}>
-        <planeGeometry args={[30, 30]} />
-        <meshStandardMaterial transparent opacity={0.8} />
-      </mesh>
-      <gridHelper args={[30, 10, "#fff", "#fff"]} position={[0, 0.01, 0]} />
-      <Text position={[0, 0.1, 16]} fontSize={1} color="#fff">SOMATIC_RELEASE_ZONE</Text>
-    </group>
-  );
 }
 
 function Dojo({ position }: any) {
@@ -194,8 +167,7 @@ function ToxicVessel({ data, onHeal, playerPosRef, creepRef }: any) {
   const vesselRef = useRef<any>(null);
   const modelRef = useRef<any>(null);
   const [isHealed, setIsHealed] = useState(false);
-
-  useFrame((state) => {
+  useFrame(() => {
      if (!vesselRef.current || !playerPosRef.current || isHealed) return;
      const pos = vesselRef.current.translation();
      const pPos = playerPosRef.current;
@@ -206,24 +178,12 @@ function ToxicVessel({ data, onHeal, playerPosRef, creepRef }: any) {
         vesselRef.current.setLinvel({ x: direction.x, y: 0, z: direction.z }, true);
         modelRef.current.rotation.y = Math.atan2(pPos.x - pos.x, pPos.z - pos.z);
      }
-     modelRef.current.rotation.z = Math.sin(state.clock.elapsedTime * (data.type === 'HEAVY' ? 2 : 5)) * 0.1;
   });
 
-  const heal = () => {
-    if (isHealed) return;
-    setIsHealed(true);
-    onHeal();
-  };
+  const heal = () => { if (!isHealed) { setIsHealed(true); onHeal(); } };
 
   return (
-    <RigidBody 
-      ref={(el: any) => { vesselRef.current = el; creepRef(el); }} 
-      position={data.position} 
-      colliders="cuboid" 
-      lockRotations 
-      mass={isHealed ? 1000 : (data.type === 'HEAVY' ? 8 : 2)}
-      type={isHealed ? "fixed" : "dynamic"}
-    >
+    <RigidBody ref={(el: any) => { vesselRef.current = el; creepRef(el); }} position={data.position} colliders="cuboid" lockRotations mass={isHealed ? 1000 : 4} type={isHealed ? "fixed" : "dynamic"}>
       <group ref={modelRef}>
         {!isHealed ? (
           <>
@@ -237,7 +197,6 @@ function ToxicVessel({ data, onHeal, playerPosRef, creepRef }: any) {
              <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
                 <mesh position={[0, 0.5, 0]}><cylinderGeometry args={[0.05, 0.05, 1]} /><meshStandardMaterial color="#00ff00" /></mesh>
                 <mesh position={[0, 1, 0]}><sphereGeometry args={[0.4, 16, 16]} /><meshStandardMaterial color="#ff00ff" emissive="#ff00ff" emissiveIntensity={2} /></mesh>
-                <Billboard position={[0, 1.8, 0]}><Text fontSize={0.25} color="#00ff00">SIGNAL_HEALED</Text></Billboard>
              </Float>
           </group>
         )}
@@ -249,12 +208,8 @@ function ToxicVessel({ data, onHeal, playerPosRef, creepRef }: any) {
 function Scene({ mobileInput, setScore, setPP, pp }: any) {
   const [kickRange, setKickRange] = useState(1.0);
   const [affirmation, setAffirmation] = useState("Breathe.");
-  const [shards, setShards] = useState(() => Array.from({length: 12}).map((_, i) => ({
-    id: i, position: [(Math.random() - 0.5) * 400, 1.5, (Math.random() - 0.5) * 400] as [number, number, number]
-  })));
-  const vessels = useRef(Array.from({length: 30}).map((_, i) => ({
-    id: i,
-    type: Math.random() > 0.8 ? 'HEAVY' : 'NORMAL',
+  const vessels = useRef(Array.from({length: 25}).map((_, i) => ({
+    id: i, type: Math.random() > 0.8 ? 'HEAVY' : 'NORMAL',
     position: [(Math.random() - 0.5) * 500, 2, (Math.random() - 0.5) * 500] as [number, number, number],
     message: TOXIC_PHRASES[Math.floor(Math.random() * TOXIC_PHRASES.length)],
   })));
@@ -272,53 +227,34 @@ function Scene({ mobileInput, setScore, setPP, pp }: any) {
         if (pPos.distanceTo(new THREE.Vector3(cPos.x, cPos.y, cPos.z)) < 6) noiseDrain += 8 * delta;
     });
     const inDojo = pPos.distanceTo(new THREE.Vector3(0, 0, 0)) < 12;
-    const inDanceFloor = pPos.distanceTo(new THREE.Vector3(40, 0, 40)) < 15;
-    const regen = (inDojo || inDanceFloor) ? 20 * delta : 0;
+    const regen = inDojo ? 20 * delta : 0;
     setPP((prev: number) => THREE.MathUtils.clamp(prev - noiseDrain + regen, 0, 100));
     if (orbitRef.current) orbitRef.current.target.lerp(pPos.clone().add(new THREE.Vector3(0, 1.5, 0)), 0.1);
   });
-
-  const handleAttack = () => {
-     setAffirmation(THERAPY_AFFIRMATIONS[Math.floor(Math.random() * THERAPY_AFFIRMATIONS.length)]);
-     setPP((prev: number) => Math.min(100, prev + 5));
-  };
 
   return (
     <>
       <ambientLight intensity={0.4} />
       <directionalLight position={[100, 100, 50]} castShadow intensity={2} />
       <Physics gravity={[0, -45, 0]}>
-        <KarateMan onAttack={handleAttack} playerPosRef={playerPosRef} kickRange={kickRange} mobileInput={mobileInput} pp={pp} />
+        <KarateMan onAttack={() => setAffirmation("Boundaries established.")} playerPosRef={playerPosRef} kickRange={kickRange} mobileInput={mobileInput} pp={pp} />
         {vessels.current.map((v) => (
-          <ToxicVessel 
-            key={v.id} data={v} playerPosRef={playerPosRef} 
-            creepRef={(el: any) => el ? creepRefs.current.set(v.id, el) : creepRefs.current.delete(v.id)}
-            onHeal={() => setScore((s:any) => s + 1)} 
-          />
+          <ToxicVessel key={v.id} data={v} playerPosRef={playerPosRef} creepRef={(el: any) => el ? creepRefs.current.set(v.id, el) : creepRefs.current.delete(v.id)} onHeal={() => setScore((s:any) => s + 1)} />
         ))}
-        {shards.map((s) => (
-          <RigidBody key={s.id} type="fixed" position={s.position} sensor onIntersectionEnter={() => {
-              setShards(prev => prev.filter(sh => sh.id !== s.id));
-              setKickRange(prev => prev + 0.05);
-              setAffirmation("CAPACITY_EXPANDED");
-              setPP((prev: number) => Math.min(100, prev + 10));
-          }}><mesh castShadow><octahedronGeometry args={[0.5]} /><meshStandardMaterial color="#00ff00" emissive="#00ff00" emissiveIntensity={5} /></mesh></RigidBody>
-        ))}
-        <Dojo position={[0, 0, 0]} />
-        <DanceFloor position={[40, 0, 40]} />
-        <BouncePad position={[40, 0.5, 40]} onBounce={() => setAffirmation("EMBODYING_THE_SIGNAL")} />
-        <BouncePad position={[45, 0.5, 35]} onBounce={() => setAffirmation("SOMATIC_RELEASE")} />
-        
-        <WorldNode position={[120, 0, -120]} label="GASLIGHT_BANK" color="#ffd700" scale={[1.5, 2.5, 1.5]} />
-        <WorldNode position={[-150, 0, 100]} label="ALPHA_GYM" color="#ff0000" scale={[1.5, 1.5, 1.5]} />
-        <WorldNode position={[100, 0, 200]} label="LINKEDIN_LABS" color="#0077b5" scale={[1.5, 3.5, 1.5]} />
-
+        <Dojo position={[0, -0.5, 0]} />
+        <Muse position={[40, 2, 40]} onWisdom={() => {
+            setKickRange(prev => prev + 0.1);
+            setAffirmation(DIVINE_WISDOM[Math.floor(Math.random() * DIVINE_WISDOM.length)]);
+            setPP(100);
+        }} />
+        <WorldNode position={[120, 0, -120]} label="GASLIGHT_BANK" color="#ffd700" />
+        <WorldNode position={[-150, 0, 100]} label="ALPHA_GYM" color="#ff0000" />
         <RigidBody type="fixed" position={[0, -1, 0]}>
           <mesh receiveShadow><boxGeometry args={[4000, 2, 4000]} /><meshStandardMaterial color="#050505" /></mesh>
           <gridHelper args={[4000, 400, "#ff00ff", "#111"]} position={[0, 1.01, 0]} />
         </RigidBody>
       </Physics>
-      <OrbitControls ref={orbitRef} enablePan={false} enableZoom={true} maxPolarAngle={Math.PI / 2.2} minDistance={10} maxDistance={60} makeDefault />
+      <OrbitControls ref={orbitRef} enablePan={false} enableZoom={true} maxPolarAngle={Math.PI / 2.2} minDistance={8} maxDistance={40} makeDefault />
       <Html fullscreen zIndexRange={[100, 0]}>
          <div className="ui-overlay" style={{ pointerEvents: 'none' }}>
            <p style={{color: 'var(--pixels-green)', fontSize: '14px'}}>{affirmation.toUpperCase()}</p>
@@ -345,15 +281,14 @@ function App() {
     <KeyboardControls map={keyboardMap}>
       <div className="quest-container">
         <Canvas shadows dpr={[1, 2]}>
-          <PerspectiveCamera makeDefault position={[0, 10, 20]} fov={40} />
+          <PerspectiveCamera makeDefault position={[0, 5, 10]} fov={40} />
           <Scene mobileInput={mobileInput} setScore={setScore} setPP={setPP} pp={pp} />
         </Canvas>
         <div className="ui-header">
              <h1>PARADA.QUEST</h1>
              <div className="meter-label">PEACE_POINTS (PP)</div>
              <div className="pp-bar"><div className="fill" style={{ width: `${pp}%`, backgroundColor: pp > 30 ? 'var(--pixels-green)' : '#ff0000' }}></div></div>
-             <div className="integration-bar"><div className="fill" style={{ width: `${Math.min(100, score * 3.3)}%` }}></div></div>
-             <div className="score-text">SIGNALS_HEALED: {score}/30</div>
+             <div className="score-text">ENCLAVE_HEALED: {score}/30</div>
         </div>
         <div className="mobile-interface">
             <div className="virtual-joystick" ref={joystickRef} onPointerMove={handleJoystick} onPointerUp={resetJoystick} onPointerLeave={resetJoystick} onTouchMove={handleJoystick} onTouchEnd={resetJoystick}>

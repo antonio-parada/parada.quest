@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { Physics, RigidBody } from '@react-three/rapier'
 import { KeyboardControls, useKeyboardControls, Html, PerspectiveCamera, Text, Billboard } from '@react-three/drei'
@@ -50,13 +50,14 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput }: any) {
     if (!bodyRef.current) return;
     const keys = getKeys();
     
+    // CONSOLIDATED INPUT
     const input = {
-        forward: keys.forward || mobileInput.forward,
-        backward: keys.backward || mobileInput.backward,
-        left: keys.left || mobileInput.left,
-        right: keys.right || mobileInput.right,
-        jump: keys.jump || mobileInput.jump,
-        attack: keys.attack || mobileInput.attack
+        forward: keys.forward || mobileInput.current.forward,
+        backward: keys.backward || mobileInput.current.backward,
+        left: keys.left || mobileInput.current.left,
+        right: keys.right || mobileInput.current.right,
+        jump: keys.jump || mobileInput.current.jump,
+        attack: keys.attack || mobileInput.current.attack
     };
 
     const pos = bodyRef.current.translation();
@@ -77,20 +78,22 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput }: any) {
 
     const isMoving = direction.lengthSq() > 0;
     if (isMoving) {
-      direction.normalize().multiplyScalar(10);
+      direction.normalize().multiplyScalar(12);
       groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, Math.atan2(direction.x, direction.z), 0.2);
     }
     
+    // AGGRESSIVE PHYSICS DAMPING
     const targetVelX = isMoving ? direction.x : 0;
     const targetVelZ = isMoving ? direction.z : 0;
+    
     bodyRef.current.setLinvel({ 
-        x: THREE.MathUtils.lerp(linvel.x, targetVelX, 0.2), 
+        x: THREE.MathUtils.lerp(linvel.x, targetVelX, 0.25), 
         y: linvel.y, 
-        z: THREE.MathUtils.lerp(linvel.z, targetVelZ, 0.2) 
+        z: THREE.MathUtils.lerp(linvel.z, targetVelZ, 0.25) 
     }, true);
 
     if (input.jump && Math.abs(linvel.y) < 0.1 && pos.y < 1.5) {
-       bodyRef.current.setLinvel({ x: linvel.x, y: 15, z: linvel.z }, true);
+       bodyRef.current.setLinvel({ x: linvel.x, y: 16, z: linvel.z }, true);
     }
 
     const t = state.clock.elapsedTime;
@@ -103,21 +106,15 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput }: any) {
   });
 
   return (
-    <RigidBody ref={bodyRef} position={[0, 2, 0]} colliders="cuboid" lockRotations mass={1}>
+    <RigidBody ref={bodyRef} position={[0, 2, 0]} colliders="cuboid" lockRotations mass={1} friction={2}>
       <group ref={groupRef}>
         <mesh position={[0, 0.3, 0]} castShadow><boxGeometry args={[0.7, 0.9, 0.5]} /><meshStandardMaterial color="#fff" /></mesh>
         <mesh position={[0, 0, 0]} castShadow><boxGeometry args={[0.75, 0.15, 0.55]} /><meshStandardMaterial color="#000" /></mesh>
         <group position={[0, 1, 0.05]}>
           <mesh castShadow><boxGeometry args={[0.58, 0.48, 0.58]} /><meshStandardMaterial color="#ff00ff" /></mesh>
           <mesh position={[0, -0.15, 0.02]} castShadow><boxGeometry args={[0.5, 0.4, 0.5]} /><meshStandardMaterial color="#fdd" /></mesh>
-          <mesh position={[0.12, -0.1, 0.26]}>
-             <boxGeometry args={[0.07, 0.04, 0.04]} />
-             <meshStandardMaterial color="#000" />
-          </mesh>
-          <mesh position={[-0.12, -0.1, 0.26]}>
-             <boxGeometry args={[0.07, 0.04, 0.04]} />
-             <meshStandardMaterial color="#000" />
-          </mesh>
+          <mesh position={[0.12, -0.1, 0.26]}><boxGeometry args={[0.07, 0.04, 0.04]} /><meshStandardMaterial color="#000" /></mesh>
+          <mesh position={[-0.12, -0.1, 0.26]}><boxGeometry args={[0.07, 0.04, 0.04]} /><meshStandardMaterial color="#000" /></mesh>
         </group>
         <group ref={leftArm} position={[0.45, 0.6, 0]}><mesh position={[0, -0.3, 0]} castShadow><boxGeometry args={[0.2, 0.6, 0.2]} /><meshStandardMaterial color="#fff" /></mesh></group>
         <group ref={rightArm} position={[-0.45, 0.6, 0]}><mesh position={[0, -0.3, 0]} castShadow><boxGeometry args={[0.2, 0.6, 0.2]} /><meshStandardMaterial color="#fff" /></mesh></group>
@@ -143,10 +140,8 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput }: any) {
 
 function EmotionalVessel({ data, creepRef, playerPosRef }: any) {
   const modelRef = useRef<any>(null);
-  const isIntegrated = false; // Simplified
-
   useFrame((state) => {
-     if (!creepRef.current || !playerPosRef.current || isIntegrated) return;
+     if (!creepRef.current || !playerPosRef.current) return;
      const pos = creepRef.current.translation();
      const pPos = playerPosRef.current;
      const direction = new THREE.Vector3(pPos.x - pos.x, 0, pPos.z - pos.z);
@@ -159,22 +154,13 @@ function EmotionalVessel({ data, creepRef, playerPosRef }: any) {
   });
 
   return (
-    <RigidBody ref={creepRef} position={data.position} colliders="cuboid" lockRotations mass={isIntegrated ? 100 : 4}>
+    <RigidBody ref={creepRef} position={data.position} colliders="cuboid" lockRotations mass={4}>
       <group ref={modelRef}>
-        {!isIntegrated ? (
-          <>
-            <mesh position={[0, 0.4, 0]} castShadow><boxGeometry args={[0.7, 1.2, 0.5]} /><meshStandardMaterial color="#111" /></mesh>
-            <mesh position={[0, 1.1, 0]} castShadow><boxGeometry args={[0.5, 0.5, 0.5]} /><meshStandardMaterial color="#222" /></mesh>
-            <Billboard position={[0, 2.2, 0]}>
-                <Text fontSize={0.2} color="#fff" maxWidth={2} textAlign="center">{data.message}</Text>
-            </Billboard>
-          </>
-        ) : (
-          <group>
-             <mesh position={[0, 0, 0]}><cylinderGeometry args={[0.05, 0.1, 1.5]} /><meshStandardMaterial color="#00ff00" /></mesh>
-             <mesh position={[0, 0.8, 0]}><sphereGeometry args={[0.4, 16, 16]} /><meshStandardMaterial color="#ff00ff" emissive="#ff00ff" emissiveIntensity={2} /></mesh>
-          </group>
-        )}
+        <mesh position={[0, 0.4, 0]} castShadow><boxGeometry args={[0.7, 1.2, 0.5]} /><meshStandardMaterial color="#111" /></mesh>
+        <mesh position={[0, 1.1, 0]} castShadow><boxGeometry args={[0.5, 0.5, 0.5]} /><meshStandardMaterial color="#222" /></mesh>
+        <Billboard position={[0, 2.2, 0]}>
+            <Text fontSize={0.2} color="#fff" maxWidth={2} textAlign="center">{data.message}</Text>
+        </Billboard>
       </group>
     </RigidBody>
   );
@@ -270,20 +256,32 @@ function Scene({ mobileInput, setProtocol, setScore }: any) {
 function App() {
   const [score, setScore] = useState(0);
   const [protocol, setProtocol] = useState("AFFIRM_AND_VALIDATE");
-  const [mobileInput, setMobileInput] = useState({
+  
+  // USE REF FOR ZERO-LATENCY INPUT
+  const mobileInput = useRef({
       forward: false, backward: false, left: false, right: false, jump: false, attack: false
   });
 
   const updateInput = (key: string, value: boolean) => {
-      setMobileInput(prev => ({ ...prev, [key]: value }));
+      (mobileInput.current as any)[key] = value;
   };
 
-  const resetInput = () => {
-      setMobileInput({ forward: false, backward: false, left: false, right: false, jump: false, attack: false });
+  const resetAllInput = () => {
+      mobileInput.current = { forward: false, backward: false, left: false, right: false, jump: false, attack: false };
   };
+
+  useEffect(() => {
+    // GLOBAL RESET ON POINTER UP
+    window.addEventListener('pointerup', resetAllInput);
+    window.addEventListener('blur', resetAllInput); // Reset if tab loses focus
+    return () => {
+        window.removeEventListener('pointerup', resetAllInput);
+        window.removeEventListener('blur', resetAllInput);
+    };
+  }, []);
 
   return (
-    <div className="quest-container" onPointerUp={resetInput} onPointerLeave={resetInput}>
+    <div className="quest-container">
       <KeyboardControls map={keyboardMap}>
         <Canvas shadows dpr={[1, 2]}>
           <PerspectiveCamera makeDefault position={[0, 40, 60]} fov={35} />
@@ -303,41 +301,31 @@ function App() {
       <div className="mobile-controls">
           <div className="joystick-area">
               <button 
-                onPointerDown={(e) => { e.preventDefault(); updateInput('forward', true); }} 
-                onPointerUp={(e) => { e.preventDefault(); updateInput('forward', false); }} 
-                onPointerLeave={() => updateInput('forward', false)}
+                onPointerDown={() => updateInput('forward', true)} 
                 className="joy-btn up"
               >↑</button>
               <div className="joy-row">
                   <button 
-                    onPointerDown={(e) => { e.preventDefault(); updateInput('left', true); }} 
-                    onPointerUp={(e) => { e.preventDefault(); updateInput('left', false); }} 
-                    onPointerLeave={() => updateInput('left', false)}
+                    onPointerDown={() => updateInput('left', true)} 
                     className="joy-btn left"
                   >←</button>
                   <button 
-                    onPointerDown={(e) => { e.preventDefault(); updateInput('right', true); }} 
-                    onPointerUp={(e) => { e.preventDefault(); updateInput('right', false); }} 
-                    onPointerLeave={() => updateInput('right', false)}
+                    onPointerDown={() => updateInput('right', true)} 
                     className="joy-btn right"
                   >→</button>
               </div>
               <button 
-                onPointerDown={(e) => { e.preventDefault(); updateInput('backward', true); }} 
-                onPointerUp={(e) => { e.preventDefault(); updateInput('backward', false); }} 
-                onPointerLeave={() => updateInput('backward', false)}
+                onPointerDown={() => updateInput('backward', true)} 
                 className="joy-btn down"
               >↓</button>
           </div>
           <div className="action-area">
               <button 
-                onPointerDown={(e) => { e.preventDefault(); updateInput('jump', true); }} 
-                onPointerUp={(e) => { e.preventDefault(); updateInput('jump', false); }} 
+                onPointerDown={() => updateInput('jump', true)} 
                 className="action-btn jump"
               >REGULATE</button>
               <button 
-                onPointerDown={(e) => { e.preventDefault(); updateInput('attack', true); }} 
-                onPointerUp={(e) => { e.preventDefault(); updateInput('attack', false); }} 
+                onPointerDown={() => updateInput('attack', true)} 
                 className="action-btn attack"
               >HOLD_SPACE</button>
           </div>

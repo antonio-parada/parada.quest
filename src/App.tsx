@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import { Canvas, useFrame } from '@react-three/fiber'
 import { Physics, RigidBody } from '@react-three/rapier'
 import { KeyboardControls, useKeyboardControls, Html, PerspectiveCamera, Text, Billboard, PointerLockControls, OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
@@ -44,7 +44,6 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput }: any) {
   const leftLeg = useRef<any>(null);
   const rightLeg = useRef<any>(null);
   const [, getKeys] = useKeyboardControls();
-  const { camera } = useThree();
   const [isAttacking, setIsAttacking] = useState(false);
 
   useFrame((state) => {
@@ -65,7 +64,7 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput }: any) {
        setTimeout(() => setIsAttacking(false), 250); 
     }
 
-    const cameraRotation = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
+    const cameraRotation = new THREE.Euler().setFromQuaternion(state.camera.quaternion, 'YXZ');
     cameraRotation.x = 0; cameraRotation.z = 0;
 
     const moveDirection = new THREE.Vector3(moveX, 0, moveZ);
@@ -160,7 +159,8 @@ function Scene({ mobileInput, setScore, isMobile }: any) {
   })));
   const creepRefs = useRef(new Map());
   const playerPosRef = useRef(new THREE.Vector3());
-  const controlsRef = useRef<any>(null);
+  const orbitRef = useRef<any>(null);
+  const lookSmooth = useRef(new THREE.Vector3(0, 0, 0));
 
   const handleAttack = (playerPos: any) => {
     creepRefs.current.forEach((ref) => {
@@ -176,10 +176,20 @@ function Scene({ mobileInput, setScore, isMobile }: any) {
     });
   };
 
-  useFrame(() => {
-    if (playerPosRef.current && controlsRef.current) {
-      controlsRef.current.target.lerp(playerPosRef.current.clone().add(new THREE.Vector3(0, 1.5, 0)), 0.1);
-      controlsRef.current.update();
+  useFrame((state) => {
+    if (playerPosRef.current) {
+      const pPos = playerPosRef.current;
+      const focusTarget = pPos.clone().add(new THREE.Vector3(0, 1.5, 0));
+      lookSmooth.current.lerp(focusTarget, 0.1);
+
+      if (isMobile) {
+        const idealOffset = new THREE.Vector3(0, 4, 8);
+        state.camera.position.lerp(pPos.clone().add(idealOffset), 0.05);
+        state.camera.lookAt(lookSmooth.current);
+      } else if (orbitRef.current) {
+        orbitRef.current.target.copy(lookSmooth.current);
+        orbitRef.current.update();
+      }
     }
   });
 
@@ -210,9 +220,9 @@ function Scene({ mobileInput, setScore, isMobile }: any) {
       </Physics>
       
       {isMobile ? (
-          <OrbitControls ref={controlsRef} enablePan={false} enableZoom={true} minDistance={10} maxDistance={40} makeDefault />
+          <OrbitControls enablePan={false} enableZoom={true} maxPolarAngle={Math.PI / 2.2} makeDefault />
       ) : (
-          <PointerLockControls ref={controlsRef} />
+          <PointerLockControls ref={orbitRef} />
       )}
 
       <Html fullscreen zIndexRange={[100, 0]}>

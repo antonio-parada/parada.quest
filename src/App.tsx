@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { Physics, RigidBody } from '@react-three/rapier'
-import { KeyboardControls, useKeyboardControls, Html, OrbitControls, PerspectiveCamera } from '@react-three/drei'
+import { KeyboardControls, useKeyboardControls, Html, OrbitControls, PerspectiveCamera, Text, Billboard } from '@react-three/drei'
 import * as THREE from 'three'
 import './App.css'
 
@@ -30,8 +30,8 @@ function KarateMan({ onAttack, playerPosRef }: any) {
   const bodyRef = useRef<any>(null);
   const groupRef = useRef<any>(null);
   const [, getKeys] = useKeyboardControls();
-  const speed = 8;
-  const jumpStrength = 10;
+  const speed = 9;
+  const jumpStrength = 11;
   const [isAttacking, setIsAttacking] = useState(false);
 
   useFrame(() => {
@@ -67,7 +67,7 @@ function KarateMan({ onAttack, playerPosRef }: any) {
   });
 
   return (
-    <RigidBody ref={bodyRef} position={[0, 2, 0]} colliders="cuboid" lockRotations mass={1} friction={0.5}>
+    <RigidBody ref={bodyRef} position={[0, 2, 0]} colliders="cuboid" lockRotations mass={1}>
       <group ref={groupRef}>
         <mesh position={[0, 0, 0]} castShadow>
           <boxGeometry args={[0.8, 1, 0.6]} />
@@ -96,7 +96,7 @@ function KarateMan({ onAttack, playerPosRef }: any) {
         {isAttacking && (
            <mesh position={[0, -0.1, 0.7]}>
              <boxGeometry args={[0.4, 0.4, 1.2]} />
-             <meshStandardMaterial color="#ff00ff" emissive="#ff00ff" emissiveIntensity={2} />
+             <meshStandardMaterial color="#ff00ff" emissive="#ff00ff" emissiveIntensity={3} />
            </mesh>
         )}
       </group>
@@ -106,6 +106,7 @@ function KarateMan({ onAttack, playerPosRef }: any) {
 
 function Creep({ data, creepRef, playerPosRef }: any) {
   const modelRef = useRef<any>(null);
+  const innerGroupRef = useRef<any>(null);
   
   useFrame((state) => {
      if (!creepRef.current || !playerPosRef.current) return;
@@ -114,14 +115,13 @@ function Creep({ data, creepRef, playerPosRef }: any) {
      
      const direction = new THREE.Vector3(pPos.x - pos.x, 0, pPos.z - pos.z);
      if (direction.lengthSq() > 4) { 
-        direction.normalize().multiplyScalar(data.type === 'GREED' ? 2.5 : 1.6);
+        direction.normalize().multiplyScalar(data.type === 'GREED' ? 2.8 : 1.8);
         const linvel = creepRef.current.linvel();
         creepRef.current.setLinvel({ x: direction.x, y: linvel.y, z: direction.z }, true);
         const angle = Math.atan2(pPos.x - pos.x, pPos.z - pos.z);
-        modelRef.current.rotation.y = angle;
+        innerGroupRef.current.rotation.y = angle;
      }
-     // Only wobble the model, not the whole physics body or UI
-     modelRef.current.rotation.z = Math.sin(state.clock.elapsedTime * (data.type === 'GLUTTONY' ? 2 : 4)) * 0.08;
+     modelRef.current.rotation.z = Math.sin(state.clock.elapsedTime * (data.type === 'GLUTTONY' ? 2 : 4)) * 0.1;
   });
 
   return (
@@ -131,70 +131,77 @@ function Creep({ data, creepRef, playerPosRef }: any) {
       colliders="cuboid" 
       lockRotations 
       mass={data.type === 'GLUTTONY' ? 6 : 2}
-      friction={1}
     >
-      <group ref={modelRef}>
-        {data.type === 'GLUTTONY' ? (
-          <>
-            <mesh position={[0, 0, 0]} castShadow>
-              <sphereGeometry args={[0.9, 12, 12]} />
-              <meshStandardMaterial color="#222" />
-            </mesh>
-            <mesh position={[0, 0.5, 0]} castShadow>
-              <sphereGeometry args={[0.7, 12, 12]} />
-              <meshStandardMaterial color="#222" />
-            </mesh>
-            <mesh position={[0, 1, 0]} castShadow>
-              <boxGeometry args={[0.4, 0.4, 0.4]} />
-              <meshStandardMaterial color="#111" />
-            </mesh>
-            <mesh position={[0.1, 1.05, 0.21]}>
-              <sphereGeometry args={[0.05]} />
-              <meshStandardMaterial color="#ff0000" emissive="#ff0000" emissiveIntensity={2} />
-            </mesh>
-            <mesh position={[-0.1, 1.05, 0.21]}>
-              <sphereGeometry args={[0.05]} />
-              <meshStandardMaterial color="#ff0000" emissive="#ff0000" emissiveIntensity={2} />
-            </mesh>
-          </>
-        ) : (
-          <>
-            <mesh position={[0, 0.5, 0]} castShadow>
-              <boxGeometry args={[0.3, 1.8, 0.3]} />
-              <meshStandardMaterial color="#ffd700" metalness={1} roughness={0.1} />
-            </mesh>
-            <mesh position={[0, 1.5, 0]} castShadow>
-              <sphereGeometry args={[0.35, 8, 8]} />
-              <meshStandardMaterial color="#8b4513" />
-            </mesh>
-            <mesh position={[0, 1.5, 0.31]}>
-              <boxGeometry args={[0.1, 0.3, 0.05]} />
-              <meshStandardMaterial color="#ffd700" emissive="#ffd700" />
-            </mesh>
-            <mesh position={[0.4, 1.2, 0]} rotation={[0, 0, 0.5]}>
-              <boxGeometry args={[0.1, 1, 0.1]} />
-              <meshStandardMaterial color="#ffd700" />
-            </mesh>
-            <mesh position={[-0.4, 1.2, 0]} rotation={[0, 0, -0.5]}>
-              <boxGeometry args={[0.1, 1, 0.1]} />
-              <meshStandardMaterial color="#ffd700" />
-            </mesh>
-          </>
-        )}
+      <group ref={innerGroupRef}>
+        <group ref={modelRef}>
+          {data.type === 'GLUTTONY' ? (
+            <>
+              <mesh position={[0, 0, 0]} castShadow>
+                <sphereGeometry args={[0.9, 12, 12]} />
+                <meshStandardMaterial color="#222" />
+              </mesh>
+              <mesh position={[0, 0.5, 0]} castShadow>
+                <sphereGeometry args={[0.7, 12, 12]} />
+                <meshStandardMaterial color="#222" />
+              </mesh>
+              <mesh position={[0, 1, 0]} castShadow>
+                <boxGeometry args={[0.4, 0.4, 0.4]} />
+                <meshStandardMaterial color="#111" />
+              </mesh>
+              <mesh position={[0.1, 1.05, 0.21]}>
+                <sphereGeometry args={[0.05]} />
+                <meshStandardMaterial color="#ff0000" emissive="#ff0000" emissiveIntensity={2} />
+              </mesh>
+              <mesh position={[-0.1, 1.05, 0.21]}>
+                <sphereGeometry args={[0.05]} />
+                <meshStandardMaterial color="#ff0000" emissive="#ff0000" emissiveIntensity={2} />
+              </mesh>
+            </>
+          ) : (
+            <>
+              <mesh position={[0, 0.5, 0]} castShadow>
+                <boxGeometry args={[0.3, 1.8, 0.3]} />
+                <meshStandardMaterial color="#ffd700" metalness={1} roughness={0.1} />
+              </mesh>
+              <mesh position={[0, 1.5, 0]} castShadow>
+                <sphereGeometry args={[0.35, 8, 8]} />
+                <meshStandardMaterial color="#8b4513" />
+              </mesh>
+              <mesh position={[0, 1.5, 0.31]}>
+                <boxGeometry args={[0.1, 0.3, 0.05]} />
+                <meshStandardMaterial color="#ffd700" emissive="#ffd700" />
+              </mesh>
+              <mesh position={[0.4, 1.2, 0]} rotation={[0, 0, 0.5]}>
+                <boxGeometry args={[0.1, 1, 0.1]} />
+                <meshStandardMaterial color="#ffd700" />
+              </mesh>
+              <mesh position={[-0.4, 1.2, 0]} rotation={[0, 0, -0.5]}>
+                <boxGeometry args={[0.1, 1, 0.1]} />
+                <meshStandardMaterial color="#ffd700" />
+              </mesh>
+            </>
+          )}
+        </group>
+
+        {/* 3D Billboarding Text - 100% Anchored */}
+        <Billboard position={[0, 2.5, 0]}>
+          {/* Background Plane for the "Box" look */}
+          <mesh position={[0, 0, -0.1]}>
+            <planeGeometry args={[4, 1.2]} />
+            <meshStandardMaterial color="#000" transparent opacity={0.8} />
+          </mesh>
+          <Text
+            fontSize={0.25}
+            color={data.type === 'GREED' ? '#ffd700' : '#ff0055'}
+            anchorX="center"
+            anchorY="middle"
+            maxWidth={3.5}
+            textAlign="center"
+          >
+            {data.type === 'GREED' ? '$ $ $' : 'FAT_VOID'}\n"{data.message}"
+          </Text>
+        </Billboard>
       </group>
-      
-      {/* 
-        STABLE ANCHORING:
-        1. Outside of modelRef (no wobble)
-        2. Removed 'transform' (CSS 2D projection is stickier/lag-free)
-        3. center & distanceFactor for scaling
-      */}
-      <Html position={[0, 2.8, 0]} center distanceFactor={15}>
-         <div className={`creep-dialogue anchored ${data.type.toLowerCase()}`}>
-           <div className="money-tag">{data.type === 'GREED' ? '$ $ $' : 'FAT_VOID'}</div>
-           "{data.message}"
-         </div>
-      </Html>
     </RigidBody>
   );
 }
@@ -217,8 +224,8 @@ function Scene() {
         const enemyPos = ref.translation();
         const dist = new THREE.Vector3().subVectors(enemyPos, playerPos).length();
         if (dist < 5.0) {
-          const impulse = new THREE.Vector3().subVectors(enemyPos, playerPos).normalize().multiplyScalar(80);
-          impulse.y = 45; 
+          const impulse = new THREE.Vector3().subVectors(enemyPos, playerPos).normalize().multiplyScalar(90);
+          impulse.y = 50; 
           ref.applyImpulse(impulse, true);
           setScore(s => s + 1);
         }
@@ -239,7 +246,7 @@ function Scene() {
     <>
       <ambientLight intensity={0.4} />
       <directionalLight position={[20, 30, 10]} castShadow intensity={1.5} shadow-mapSize={[2048, 2048]} />
-      <pointLight position={[0, 10, 0]} intensity={1.5} color="#ff00ff" />
+      <pointLight position={[0, 10, 0]} intensity={2} color="#ff00ff" />
       
       <Physics gravity={[0, -25, 0]}>
         <KarateMan onAttack={handleAttack} playerPosRef={playerPosRef} />

@@ -5,15 +5,28 @@ import { KeyboardControls, useKeyboardControls, Html, OrbitControls, Perspective
 import * as THREE from 'three'
 import './App.css'
 
-const CREEPY_LINES = [
-  "Maximize your ROI.",
-  "It's just business, babe.",
-  "Market disruption is key.",
-  "You're underperforming.",
-  "Smile for the shareholders.",
-  "Leverage your assets.",
-  "Why so emotional?",
+const TOXIC_RHETORIC = [
+  "Life is a zero-sum game.",
+  "Alpha mindset only.",
+  "Empathy is a weakness.",
+  "Market disruption is god.",
+  "You're just an NPC.",
+  "Sigma grindset active.",
+  "Don't be so sensitive.",
+  "Logic over emotion.",
+  "Winning is everything.",
   "I'm a high-value male."
+];
+
+const AFFIRMATIONS = [
+  "You are enough.",
+  "The quiet is safe.",
+  "Breathe into the now.",
+  "Boundaries are beautiful.",
+  "Kindness is strength.",
+  "Choose peace.",
+  "The void is listening.",
+  "Integrity is the only lens."
 ];
 
 const keyboardMap = [
@@ -88,39 +101,30 @@ function KarateMan({ onAttack, playerPosRef, kickRange }: any) {
     if (Math.abs(linvel.y) > 1) {
        leftLeg.current.rotation.x = -0.5;
        rightLeg.current.rotation.x = 0.5;
-       leftArm.current.rotation.z = 0.8;
-       rightArm.current.rotation.z = -0.8;
-    } else {
-       leftArm.current.rotation.z = 0;
-       rightArm.current.rotation.z = 0;
     }
   });
 
   return (
     <RigidBody ref={bodyRef} position={[0, 2, 0]} colliders="cuboid" lockRotations mass={1}>
       <group ref={groupRef}>
-        {/* Torso */}
         <mesh position={[0, 0.3, 0]} castShadow>
           <boxGeometry args={[0.7, 0.9, 0.5]} />
           <meshStandardMaterial color="#fff" />
         </mesh>
-        {/* Black Belt */}
         <mesh position={[0, 0, 0]} castShadow>
           <boxGeometry args={[0.75, 0.15, 0.55]} />
           <meshStandardMaterial color="#000" />
         </mesh>
 
-        {/* --- HANDSOME FACE & PINK HAIR --- */}
         <group position={[0, 1, 0.05]}>
-          <mesh castShadow> {/* Hair - Pink Buzz Cut */}
+          <mesh castShadow>
             <boxGeometry args={[0.58, 0.48, 0.58]} />
             <meshStandardMaterial color="#ff00ff" />
           </mesh>
-          <mesh position={[0, -0.15, 0.02]} castShadow> {/* Face / Jaw */}
+          <mesh position={[0, -0.15, 0.02]} castShadow>
             <boxGeometry args={[0.5, 0.4, 0.5]} />
             <meshStandardMaterial color="#fdd" />
           </mesh>
-          {/* Eyes */}
           <mesh position={[0.12, -0.1, 0.26]}>
              <boxGeometry args={[0.07, 0.04, 0.04]} />
              <meshStandardMaterial color="#000" />
@@ -129,7 +133,6 @@ function KarateMan({ onAttack, playerPosRef, kickRange }: any) {
              <boxGeometry args={[0.07, 0.04, 0.04]} />
              <meshStandardMaterial color="#000" />
           </mesh>
-          {/* Eyebrows - Strong / Determined */}
           <mesh position={[0.12, -0.05, 0.26]}>
              <boxGeometry args={[0.1, 0.02, 0.02]} />
              <meshStandardMaterial color="#000" />
@@ -138,19 +141,12 @@ function KarateMan({ onAttack, playerPosRef, kickRange }: any) {
              <boxGeometry args={[0.1, 0.02, 0.02]} />
              <meshStandardMaterial color="#000" />
           </mesh>
-          {/* Nose */}
           <mesh position={[0, -0.15, 0.27]}>
              <boxGeometry args={[0.05, 0.08, 0.05]} />
              <meshStandardMaterial color="#ecb" />
           </mesh>
-          {/* Stoic Mouth */}
-          <mesh position={[0, -0.25, 0.26]}>
-             <boxGeometry args={[0.15, 0.01, 0.02]} />
-             <meshStandardMaterial color="#000" transparent opacity={0.3} />
-          </mesh>
         </group>
 
-        {/* Arms */}
         <group ref={leftArm} position={[0.45, 0.6, 0]}>
           <mesh position={[0, -0.3, 0]} castShadow>
             <boxGeometry args={[0.2, 0.6, 0.2]} />
@@ -163,8 +159,6 @@ function KarateMan({ onAttack, playerPosRef, kickRange }: any) {
             <meshStandardMaterial color="#fff" />
           </mesh>
         </group>
-
-        {/* Legs */}
         <group ref={leftLeg} position={[0.2, -0.2, 0]}>
           <mesh position={[0, -0.3, 0]} castShadow>
             <boxGeometry args={[0.25, 0.6, 0.25]} />
@@ -178,11 +172,11 @@ function KarateMan({ onAttack, playerPosRef, kickRange }: any) {
           </mesh>
         </group>
 
-        {/* --- SURGICAL PINK STRIKE (REDUCED SIZE) --- */}
+        {/* Surgical Purification Strike */}
         {isAttacking && (
            <mesh position={[0, 0, (kickRange + 0.5) / 2]}>
-             <boxGeometry args={[0.2, 0.2, kickRange]} />
-             <meshStandardMaterial color="#ff00ff" emissive="#ff00ff" emissiveIntensity={15} transparent opacity={0.7} />
+             <boxGeometry args={[0.15, 0.15, kickRange]} />
+             <meshStandardMaterial color="#ff00ff" emissive="#ff00ff" emissiveIntensity={20} transparent opacity={0.8} />
            </mesh>
         )}
       </group>
@@ -190,8 +184,9 @@ function KarateMan({ onAttack, playerPosRef, kickRange }: any) {
   );
 }
 
-function ToxicNoise({ data, creepRef, playerPosRef }: any) {
+function NoiseVessel({ data, creepRef, playerPosRef }: any) {
   const modelRef = useRef<any>(null);
+  const isHit = false; // Placeholder for now
   
   useFrame((state) => {
      if (!creepRef.current || !playerPosRef.current) return;
@@ -199,7 +194,7 @@ function ToxicNoise({ data, creepRef, playerPosRef }: any) {
      const pPos = playerPosRef.current;
      const direction = new THREE.Vector3(pPos.x - pos.x, 0, pPos.z - pos.z);
      if (direction.lengthSq() > 4) { 
-        direction.normalize().multiplyScalar(data.type === 'CORPORATE' ? 3.0 : 1.8);
+        direction.normalize().multiplyScalar(data.type === 'GREED' ? 2.5 : 1.5);
         const linvel = creepRef.current.linvel();
         creepRef.current.setLinvel({ x: direction.x, y: linvel.y, z: direction.z }, true);
         const angle = Math.atan2(pPos.x - pos.x, pPos.z - pos.z);
@@ -209,31 +204,19 @@ function ToxicNoise({ data, creepRef, playerPosRef }: any) {
   });
 
   return (
-    <RigidBody ref={creepRef} position={data.position} colliders="cuboid" lockRotations mass={data.type === 'CORPORATE' ? 3 : 5}>
+    <RigidBody ref={creepRef} position={data.position} colliders="cuboid" lockRotations mass={4}>
       <group ref={modelRef}>
         <mesh position={[0, 0.4, 0]} castShadow>
           <boxGeometry args={[0.7, 1.2, 0.5]} />
-          <meshStandardMaterial color={data.type === 'CORPORATE' ? "#111" : "#333"} />
+          <meshStandardMaterial color={isHit ? "#fff" : "#111"} />
         </mesh>
         <mesh position={[0.4, 0.2, 0.3]} castShadow>
           <boxGeometry args={[0.2, 0.1, 0.4]} />
-          <meshStandardMaterial color="#ffd700" metalness={1} />
-        </mesh>
-        <mesh position={[0, 1.1, 0]} castShadow>
-          <boxGeometry args={[0.5, 0.5, 0.5]} />
-          <meshStandardMaterial color="#222" />
-        </mesh>
-        <mesh position={[0.12, 1.15, 0.26]}>
-          <sphereGeometry args={[0.04]} />
-          <meshStandardMaterial color="#ffd700" emissive="#ffd700" emissiveIntensity={2} />
-        </mesh>
-        <mesh position={[-0.12, 1.15, 0.26]}>
-          <sphereGeometry args={[0.04]} />
-          <meshStandardMaterial color="#ffd700" emissive="#ffd700" emissiveIntensity={2} />
+          <meshStandardMaterial color="#ffd700" />
         </mesh>
         <Billboard position={[0, 2.5, 0]}>
-          <Text fontSize={0.25} color="#fff" anchorX="center" anchorY="middle" maxWidth={3} textAlign="center">
-            {data.message}
+          <Text fontSize={0.22} color={isHit ? "#ff00ff" : "#fff"} anchorX="center" anchorY="middle" maxWidth={2.5} textAlign="center">
+            {isHit ? "I AM ENOUGH." : data.message}
           </Text>
         </Billboard>
       </group>
@@ -241,15 +224,15 @@ function ToxicNoise({ data, creepRef, playerPosRef }: any) {
   );
 }
 
-function UpliftShard({ position, onCollect }: any) {
+function KindnessShard({ position, onCollect }: any) {
   return (
     <Float speed={5} rotationIntensity={2} floatIntensity={2}>
       <RigidBody type="fixed" position={position} sensor onIntersectionEnter={onCollect}>
         <mesh castShadow>
-          <octahedronGeometry args={[0.5]} />
-          <meshStandardMaterial color="#ff00ff" emissive="#ff00ff" emissiveIntensity={2} />
+          <sphereGeometry args={[0.3, 16, 16]} />
+          <meshStandardMaterial color="#ff00ff" emissive="#ff00ff" emissiveIntensity={5} />
         </mesh>
-        <Text position={[0, 1, 0]} fontSize={0.3} color="#00ff00">UPLIFT</Text>
+        <Text position={[0, 0.8, 0]} fontSize={0.25} color="#00ff00">AFFIRM</Text>
       </RigidBody>
     </Float>
   );
@@ -257,17 +240,20 @@ function UpliftShard({ position, onCollect }: any) {
 
 function Scene() {
   const [score, setScore] = useState(0);
-  const [kickRange, setKickRange] = useState(2);
-  const [shards, setShards] = useState(() => Array.from({length: 5}).map((_, i) => ({
+  const [kickRange, setKickRange] = useState(0.8); // Starts shorter
+  const [affirmation, setAffirmation] = useState("");
+  const [shards, setShards] = useState(() => Array.from({length: 8}).map((_, i) => ({
     id: i,
-    position: [(Math.random() - 0.5) * 50, 1.5, (Math.random() - 0.5) * 50]
+    position: [(Math.random() - 0.5) * 60, 1.5, (Math.random() - 0.5) * 60]
   })));
+  
   const creeps = useRef(Array.from({length: 12}).map((_, i) => ({
     id: i,
-    type: Math.random() > 0.5 ? 'CORPORATE' : 'GLUTTON',
+    type: Math.random() > 0.5 ? 'GREED' : 'NOISE',
     position: [(Math.random() - 0.5) * 80, 2, (Math.random() - 0.5) * 80],
-    message: CREEPY_LINES[Math.floor(Math.random() * CREEPY_LINES.length)],
+    message: TOXIC_RHETORIC[Math.floor(Math.random() * TOXIC_RHETORIC.length)],
   })));
+
   const creepRefs = useRef(new Map());
   const playerPosRef = useRef(new THREE.Vector3());
   const camSmooth = useRef(new THREE.Vector3(0, 20, 30));
@@ -278,11 +264,12 @@ function Scene() {
       if (ref) {
         const enemyPos = ref.translation();
         const dist = new THREE.Vector3().subVectors(enemyPos, playerPos).length();
-        if (dist < kickRange + 2.5) {
-          const impulse = new THREE.Vector3().subVectors(enemyPos, playerPos).normalize().multiplyScalar(120);
-          impulse.y = 60; 
+        if (dist < kickRange + 2.0) {
+          const impulse = new THREE.Vector3().subVectors(enemyPos, playerPos).normalize().multiplyScalar(130);
+          impulse.y = 70; 
           ref.applyImpulse(impulse, true);
           setScore(s => s + 1);
+          setAffirmation(AFFIRMATIONS[Math.floor(Math.random() * AFFIRMATIONS.length)]);
         }
       }
     });
@@ -290,7 +277,8 @@ function Scene() {
 
   const collectShard = (id: number) => {
     setShards(prev => prev.filter(s => s.id !== id));
-    setKickRange(prev => prev + 2);
+    setKickRange(prev => prev + 0.4); // Gradual growth
+    setAffirmation("KINDNESS_EXPANDED");
   };
 
   useFrame((state) => {
@@ -315,10 +303,11 @@ function Scene() {
       <ambientLight intensity={0.4} />
       <directionalLight position={[30, 50, 20]} castShadow intensity={2} shadow-mapSize={[4096, 4096]} />
       <pointLight position={[0, 15, 0]} intensity={3} color="#ff00ff" />
-      <Physics gravity={[0, -35, 0]}>
+      
+      <Physics gravity={[0, -40, 0]}>
         <KarateMan onAttack={handleAttack} playerPosRef={playerPosRef} kickRange={kickRange} />
         {creeps.current.map((c) => (
-          <ToxicNoise 
+          <NoiseVessel 
             key={c.id} 
             data={c} 
             creepRef={(el: any) => {
@@ -329,24 +318,29 @@ function Scene() {
           />
         ))}
         {shards.map((s) => (
-          <UpliftShard key={s.id} position={s.position} onCollect={() => collectShard(s.id)} />
+          <KindnessShard key={s.id} position={s.position} onCollect={() => collectShard(s.id)} />
         ))}
         <RigidBody type="fixed" colliders="cuboid" position={[0, -1, 0]}>
           <mesh receiveShadow>
-            <boxGeometry args={[300, 2, 300]} />
+            <boxGeometry args={[400, 2, 400]} />
             <meshStandardMaterial color="#050505" />
           </mesh>
-          <gridHelper args={[300, 150, "#00ff00", "#111"]} position={[0, 1.01, 0]} />
+          <gridHelper args={[400, 200, "#00ff00", "#111"]} position={[0, 1.01, 0]} />
         </RigidBody>
       </Physics>
-      <OrbitControls enablePan={false} maxPolarAngle={Math.PI / 2.2} minDistance={10} maxDistance={50} makeDefault />
+
+      <OrbitControls enablePan={false} maxPolarAngle={Math.PI / 2.2} minDistance={10} maxDistance={60} makeDefault />
+
       <Html fullscreen zIndexRange={[100, 0]}>
          <div className="ui-overlay">
            <h1>PARADA.QUEST</h1>
-           <p style={{color: 'var(--pixels-green)'}}>SYSTEM_ARCHITECT // UPLIFT_MODE</p>
-           <p>NOISE_FILTERED: {score}</p>
-           <p>RESONANCE_STRENGTH: {((kickRange - 2) / 2 + 1).toFixed(1)}x</p>
-           <div className="controls">[WASD] NAVIGATE // [K] UPLIFT_KICK<br/>THE QUIET IS THE ONLY TRUTH.</div>
+           <p style={{color: 'var(--pixels-pink)'}}>PROTOCOL: KARATE_AND_HUGS</p>
+           <p>PEOPLE_UPLIFTED: {score}</p>
+           <p style={{color: 'var(--pixels-green)', fontSize: '10px'}}>{affirmation}</p>
+           <div className="controls">
+             [WASD] NAVIGATE // [K] HANDSHAKE_OF_LIGHT<br/>
+             THE QUIET IS THE ONLY STRENGTH.
+           </div>
          </div>
       </Html>
     </>

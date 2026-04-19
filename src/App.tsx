@@ -5,18 +5,30 @@ import { KeyboardControls, useKeyboardControls, Html, PerspectiveCamera, Text, B
 import * as THREE from 'three'
 import './App.css'
 
-const GASLIGHT_RHETORIC = [
-  "You're overreacting.", "I'm just being honest.", "You're too emotional.",
-  "Stop playing the victim.", "It's your fault, really.", "I never said that.",
-  "You're being irrational.", "Why are you so sensitive?", "I'm the only one who cares.",
-  "You're misremembering.", "It was just a joke.", "You're too difficult to love."
+const TOXIC_PHRASES = [
+  "You'd be prettier if you smiled.",
+  "I'm actually a really nice guy.",
+  "Do you know who I am?",
+  "I can help your career, if you're nice.",
+  "Don't be like that, babe.",
+  "I'm just giving you a compliment.",
+  "You're making a scene.",
+  "I'm the one paying for this.",
+  "You're lucky I'm even talking to you.",
+  "It's just a joke, stop being so PC.",
+  "I'm a high-value male, respect that.",
+  "Market disruption requires sacrifice."
 ];
 
 const THERAPY_AFFIRMATIONS = [
-  "I am holding space.", "Validating your experience.", "Checking my capacity.",
-  "Setting a healthy boundary.", "Processing the trigger.", "Reparenting the signal.",
-  "Honoring my needs.", "Regulating the nervous system.", "Safety is internal.",
-  "I trust my intuition.", "Integrity is my compass.", "Softness is sovereign."
+  "My boundaries are a safe house.",
+  "I am reparenting this signal.",
+  "Regulating the nervous system.",
+  "Holding space for the quiet.",
+  "Honoring my needs.",
+  "Integration complete.",
+  "I am enough.",
+  "Safe and sound."
 ];
 
 const keyboardMap = [
@@ -28,7 +40,7 @@ const keyboardMap = [
   { name: "attack", keys: ["k", "K", "Enter"] },
 ];
 
-function Building({ position, label, color, scale = [1,1,1] }: any) {
+function WorldNode({ position, label, color, scale = [1,1,1] }: any) {
     return (
       <RigidBody type="fixed" position={position}>
         <mesh castShadow scale={scale}>
@@ -48,19 +60,20 @@ function Dojo({ position }: any) {
     return (
       <RigidBody type="fixed" position={position}>
         <mesh castShadow>
-          <boxGeometry args={[12, 6, 12]} />
+          <boxGeometry args={[15, 1, 15]} />
           <meshStandardMaterial color="#111" />
         </mesh>
-        <mesh position={[0, 3.1, 0]}> {/* Roof */}
-          <boxGeometry args={[14, 0.5, 14]} />
-          <meshStandardMaterial color="#ff00ff" />
+        <mesh position={[0, 4, 0]} castShadow>
+          <boxGeometry args={[14, 8, 14]} />
+          <meshStandardMaterial color="#0a0a0a" transparent opacity={0.3} />
         </mesh>
-        <Text position={[0, 4.5, 0]} fontSize={1} color="#00ff00">RESILIENCE_DOJO</Text>
+        <Text position={[0, 9, 0]} fontSize={1.2} color="#00ff00">RESILIENCE_DOJO [SAFE_ZONE]</Text>
+        <gridHelper args={[15, 15, "#00ff00", "#00ff00"]} position={[0, 0.51, 0]} />
       </RigidBody>
     );
 }
 
-function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput }: any) {
+function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput, pp }: any) {
   const bodyRef = useRef<any>(null);
   const groupRef = useRef<any>(null);
   const leftArm = useRef<any>(null);
@@ -80,7 +93,7 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput }: any) {
     const linvel = bodyRef.current.linvel();
     playerPosRef.current.set(pos.x, pos.y, pos.z);
 
-    if ((keys.attack || mobileInput.current.attack) && !isAttacking) {
+    if ((keys.attack || mobileInput.current.attack) && !isAttacking && pp > 0) {
        setIsAttacking(true);
        onAttack(pos); 
        setTimeout(() => setIsAttacking(false), 250); 
@@ -89,8 +102,10 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput }: any) {
     const cameraRotation = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
     cameraRotation.x = 0; cameraRotation.z = 0;
     const moveDirection = new THREE.Vector3(moveX, 0, moveZ);
+    const currentSpeed = pp > 0 ? 12 : 4;
+
     if (moveDirection.lengthSq() > 0.01) {
-      moveDirection.normalize().applyEuler(cameraRotation).multiplyScalar(12);
+      moveDirection.normalize().applyEuler(cameraRotation).multiplyScalar(currentSpeed);
       const angle = Math.atan2(moveDirection.x, moveDirection.z);
       groupRef.current.rotation.y = THREE.MathUtils.lerp(groupRef.current.rotation.y, angle, 0.2);
     }
@@ -122,8 +137,8 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput }: any) {
         <group position={[0, 1, 0.05]}>
           <mesh castShadow><boxGeometry args={[0.58, 0.48, 0.58]} /><meshStandardMaterial color="#ff00ff" /></mesh>
           <mesh position={[0, -0.15, 0.02]} castShadow><boxGeometry args={[0.5, 0.4, 0.5]} /><meshStandardMaterial color="#fdd" /></mesh>
-          <mesh position={[0.12, -0.1, 0.26]}><boxGeometry args={[0.07, 0.04, 0.04]} /><meshStandardMaterial color="#000" /></mesh>
-          <mesh position={[-0.12, -0.1, 0.26]}><boxGeometry args={[0.07, 0.04, 0.04]} /><meshStandardMaterial color="#000" /></mesh>
+          <mesh position={[0.12, -0.1, 0.26]}><boxGeometry args={[0.07, 0.04, 0.05]} /><meshStandardMaterial color="#000" /></mesh>
+          <mesh position={[-0.12, -0.1, 0.26]}><boxGeometry args={[0.07, 0.04, 0.05]} /><meshStandardMaterial color="#000" /></mesh>
         </group>
         <group ref={leftArm} position={[0.45, 0.6, 0]}><mesh position={[0, -0.3, 0]} castShadow><boxGeometry args={[0.2, 0.6, 0.2]} /><meshStandardMaterial color="#fff" /></mesh></group>
         <group ref={rightArm} position={[-0.45, 0.6, 0]}><mesh position={[0, -0.3, 0]} castShadow><boxGeometry args={[0.2, 0.6, 0.2]} /><meshStandardMaterial color="#fff" /></mesh></group>
@@ -146,112 +161,142 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput }: any) {
   );
 }
 
-function EmotionalVessel({ data, onHeal, playerPosRef }: any) {
+function ToxicVessel({ data, onHeal, playerPosRef, creepRef }: any) {
   const vesselRef = useRef<any>(null);
+  const modelRef = useRef<any>(null);
   const [isHealed, setIsHealed] = useState(false);
 
-  useFrame(() => {
+  useFrame((state) => {
      if (!vesselRef.current || !playerPosRef.current || isHealed) return;
      const pos = vesselRef.current.translation();
      const pPos = playerPosRef.current;
      const direction = new THREE.Vector3(pPos.x - pos.x, 0, pPos.z - pos.z);
-     if (direction.lengthSq() > 4) { 
-        direction.normalize().multiplyScalar(1.5);
+     
+     if (direction.lengthSq() > 2) { 
+        const followSpeed = data.type === 'HEAVY' ? 0.8 : 2.5;
+        direction.normalize().multiplyScalar(followSpeed);
         vesselRef.current.setLinvel({ x: direction.x, y: 0, z: direction.z }, true);
+        modelRef.current.rotation.y = Math.atan2(pPos.x - pos.x, pPos.z - pos.z);
      }
+     modelRef.current.rotation.z = Math.sin(state.clock.elapsedTime * (data.type === 'HEAVY' ? 2 : 5)) * 0.1;
   });
 
   const heal = () => {
+    if (isHealed) return;
     setIsHealed(true);
     onHeal();
   };
 
   return (
     <RigidBody 
-      ref={vesselRef} 
+      ref={(el: any) => { vesselRef.current = el; creepRef(el); }} 
       position={data.position} 
       colliders="cuboid" 
       lockRotations 
-      mass={isHealed ? 1000 : 4}
+      mass={isHealed ? 1000 : (data.type === 'HEAVY' ? 8 : 2)}
       type={isHealed ? "fixed" : "dynamic"}
     >
-      {!isHealed ? (
-        <group>
-          <mesh position={[0, 0.4, 0]} castShadow><boxGeometry args={[0.7, 1.2, 0.5]} /><meshStandardMaterial color="#111" /></mesh>
-          <mesh position={[0, 1.1, 0]} castShadow><boxGeometry args={[0.5, 0.5, 0.5]} /><meshStandardMaterial color="#222" /></mesh>
-          <Billboard position={[0, 2.2, 0]}>
-              <Text fontSize={0.2} color="#fff" maxWidth={2} textAlign="center">{data.message}</Text>
-          </Billboard>
-          <mesh visible={false} onClick={heal}>
-             <boxGeometry args={[2, 3, 2]} />
-          </mesh>
-        </group>
-      ) : (
-        <group>
-           <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
-              <mesh position={[0, 0.5, 0]}><cylinderGeometry args={[0.05, 0.05, 1]} /><meshStandardMaterial color="#00ff00" /></mesh>
-              <mesh position={[0, 1, 0]}><sphereGeometry args={[0.4, 16, 16]} /><meshStandardMaterial color="#ff00ff" emissive="#ff00ff" emissiveIntensity={2} /></mesh>
-              <Billboard position={[0, 1.8, 0]}><Text fontSize={0.25} color="#00ff00">SIGNAL_HEALED</Text></Billboard>
-           </Float>
-        </group>
-      )}
+      <group ref={modelRef}>
+        {!isHealed ? (
+          <>
+            <mesh position={[0, 0.4, 0]} castShadow>
+                <boxGeometry args={[data.type === 'HEAVY' ? 1 : 0.7, 1.2, 0.5]} />
+                <meshStandardMaterial color={data.type === 'HEAVY' ? "#300" : "#111"} />
+            </mesh>
+            <mesh position={[0, 1.1, 0]} castShadow><boxGeometry args={[0.5, 0.5, 0.5]} /><meshStandardMaterial color="#222" /></mesh>
+            <Billboard position={[0, 2.4, 0]}>
+                <Text fontSize={0.2} color="#fff" maxWidth={2.5} textAlign="center">{data.message}</Text>
+            </Billboard>
+            <mesh visible={false} onClick={heal}>
+                <boxGeometry args={[3, 4, 3]} />
+            </mesh>
+          </>
+        ) : (
+          <group>
+             <Float speed={2} rotationIntensity={0.5} floatIntensity={0.5}>
+                <mesh position={[0, 0.5, 0]}><cylinderGeometry args={[0.05, 0.05, 1]} /><meshStandardMaterial color="#00ff00" /></mesh>
+                <mesh position={[0, 1, 0]}><sphereGeometry args={[0.4, 16, 16]} /><meshStandardMaterial color="#ff00ff" emissive="#ff00ff" emissiveIntensity={2} /></mesh>
+                <Billboard position={[0, 1.8, 0]}><Text fontSize={0.25} color="#00ff00">SIGNAL_HEALED</Text></Billboard>
+             </Float>
+          </group>
+        )}
+      </group>
     </RigidBody>
   );
 }
 
-function Scene({ mobileInput, setScore }: any) {
+function Scene({ mobileInput, setScore, setPP, pp }: any) {
   const [kickRange, setKickRange] = useState(1.0);
-  const [affirmation, setAffirmation] = useState("Establishing peace.");
+  const [affirmation, setAffirmation] = useState("Holding space.");
   const [shards, setShards] = useState(() => Array.from({length: 12}).map((_, i) => ({
-    id: i, position: [(Math.random() - 0.5) * 300, 1.5, (Math.random() - 0.5) * 300] as [number, number, number]
+    id: i, position: [(Math.random() - 0.5) * 250, 1.5, (Math.random() - 0.5) * 250] as [number, number, number]
   })));
-  const vessels = useRef(Array.from({length: 30}).map((_, i) => ({
-    id: i, position: [(Math.random() - 0.5) * 400, 2, (Math.random() - 0.5) * 400] as [number, number, number],
-    message: GASLIGHT_RHETORIC[Math.floor(Math.random() * GASLIGHT_RHETORIC.length)],
+  const vessels = useRef(Array.from({length: 25}).map((_, i) => ({
+    id: i,
+    type: Math.random() > 0.8 ? 'HEAVY' : 'NORMAL',
+    position: [(Math.random() - 0.5) * 300, 2, (Math.random() - 0.5) * 300] as [number, number, number],
+    message: TOXIC_PHRASES[Math.floor(Math.random() * TOXIC_PHRASES.length)],
   })));
   const playerPosRef = useRef(new THREE.Vector3());
   const orbitRef = useRef<any>(null);
+  const creepRefs = useRef(new Map());
+
+  useFrame((_, delta) => {
+    if (!playerPosRef.current) return;
+    const pPos = playerPosRef.current;
+    let noiseDrain = 0;
+    creepRefs.current.forEach((ref) => {
+        if (!ref) return;
+        const cPos = ref.translation();
+        const dist = pPos.distanceTo(new THREE.Vector3(cPos.x, cPos.y, cPos.z));
+        if (dist < 6) noiseDrain += 5 * delta;
+    });
+    const inDojo = pPos.distanceTo(new THREE.Vector3(0, 0, 0)) < 10;
+    const regen = inDojo ? 15 * delta : 0;
+    setPP((prev: number) => THREE.MathUtils.clamp(prev - noiseDrain + regen, 0, 100));
+    if (orbitRef.current) {
+        orbitRef.current.target.lerp(pPos.clone().add(new THREE.Vector3(0, 1.5, 0)), 0.1);
+    }
+  });
 
   const handleAttack = () => {
      setAffirmation(THERAPY_AFFIRMATIONS[Math.floor(Math.random() * THERAPY_AFFIRMATIONS.length)]);
+     setPP((prev: number) => Math.min(100, prev + 5));
   };
-
-  useFrame(() => {
-    if (playerPosRef.current && orbitRef.current) {
-      orbitRef.current.target.lerp(playerPosRef.current.clone().add(new THREE.Vector3(0, 1.5, 0)), 0.1);
-    }
-  });
 
   return (
     <>
       <ambientLight intensity={0.4} />
       <directionalLight position={[100, 100, 50]} castShadow intensity={2} />
       <Physics gravity={[0, -45, 0]}>
-        <KarateMan onAttack={handleAttack} playerPosRef={playerPosRef} kickRange={kickRange} mobileInput={mobileInput} />
+        <KarateMan onAttack={handleAttack} playerPosRef={playerPosRef} kickRange={kickRange} mobileInput={mobileInput} pp={pp} />
         {vessels.current.map((v) => (
-          <EmotionalVessel key={v.id} data={v} playerPosRef={playerPosRef} onHeal={() => setScore((s:any) => s + 1)} />
+          <ToxicVessel 
+            key={v.id} data={v} playerPosRef={playerPosRef} 
+            creepRef={(el: any) => el ? creepRefs.current.set(v.id, el) : creepRefs.current.delete(v.id)}
+            onHeal={() => setScore((s:any) => s + 1)} 
+          />
         ))}
         {shards.map((s) => (
           <RigidBody key={s.id} type="fixed" position={s.position} sensor onIntersectionEnter={() => {
               setShards(prev => prev.filter(sh => sh.id !== s.id));
-              setKickRange(prev => prev + 0.1); 
+              setKickRange(prev => prev + 0.05);
               setAffirmation("CAPACITY_EXPANDED");
+              setPP((prev: number) => Math.min(100, prev + 10));
           }}>
             <mesh castShadow><octahedronGeometry args={[0.5]} /><meshStandardMaterial color="#00ff00" emissive="#00ff00" emissiveIntensity={5} /></mesh>
           </RigidBody>
         ))}
         <Dojo position={[0, 0, 0]} />
-        <Building position={[60, 0, -60]} label="GASLIGHT_BANK" color="#ffd700" scale={[1.2, 2, 1.2]} />
-        <Building position={[-70, 0, 50]} label="ALPHA_GYM" color="#ff0000" />
-        <Building position={[40, 0, 90]} label="LINKEDIN_LABS" color="#0077b5" scale={[1.5, 3, 1.5]} />
-        <Building position={[-90, 0, -80]} label="ECHO_CHAMBER" color="#ff9900" scale={[2, 1, 2]} />
-        <Building position={[120, 0, 20]} label="PENTHOUSE" color="#fff" scale={[1, 5, 1]} />
+        <WorldNode position={[80, 0, -80]} label="GASLIGHT_BANK" color="#ffd700" scale={[1.5, 2.5, 1.5]} />
+        <WorldNode position={[-100, 0, 60]} label="ALPHA_GYM" color="#ff0000" scale={[1.5, 1.5, 1.5]} />
+        <WorldNode position={[50, 0, 120]} label="LINKEDIN_LABS" color="#0077b5" scale={[1.5, 3.5, 1.5]} />
         <RigidBody type="fixed" position={[0, -1, 0]}>
-          <mesh receiveShadow><boxGeometry args={[3000, 2, 3000]} /><meshStandardMaterial color="#050505" /></mesh>
-          <gridHelper args={[3000, 500, "#ff00ff", "#111"]} position={[0, 1.01, 0]} />
+          <mesh receiveShadow><boxGeometry args={[4000, 2, 4000]} /><meshStandardMaterial color="#050505" /></mesh>
+          <gridHelper args={[4000, 800, "#ff00ff", "#111"]} position={[0, 1.01, 0]} />
         </RigidBody>
       </Physics>
-      <OrbitControls ref={orbitRef} enablePan={false} enableZoom={true} maxPolarAngle={Math.PI / 2.1} minDistance={10} maxDistance={50} makeDefault />
+      <OrbitControls ref={orbitRef} enablePan={false} enableZoom={true} maxPolarAngle={Math.PI / 2.2} minDistance={10} maxDistance={60} makeDefault />
       <Html fullscreen zIndexRange={[100, 0]}>
          <div className="ui-overlay" style={{ pointerEvents: 'none' }}>
            <p style={{color: 'var(--pixels-green)', fontSize: '14px'}}>{affirmation.toUpperCase()}</p>
@@ -263,9 +308,9 @@ function Scene({ mobileInput, setScore }: any) {
 
 function App() {
   const [score, setScore] = useState(0);
+  const [pp, setPP] = useState(100);
   const mobileInput = useRef({ x: 0, y: 0, jump: false, attack: false });
   const joystickRef = useRef<HTMLDivElement>(null);
-
   const handleJoystick = (e: any) => {
       if (!joystickRef.current) return;
       const rect = joystickRef.current.getBoundingClientRect();
@@ -277,18 +322,21 @@ function App() {
       mobileInput.current.y = Math.max(-1, Math.min(1, y));
   };
   const resetJoystick = () => { mobileInput.current.x = 0; mobileInput.current.y = 0; };
-
   return (
     <KeyboardControls map={keyboardMap}>
       <div className="quest-container">
         <Canvas shadows dpr={[1, 2]}>
           <PerspectiveCamera makeDefault position={[0, 10, 20]} fov={40} />
-          <Scene mobileInput={mobileInput} setScore={setScore} />
+          <Scene mobileInput={mobileInput} setScore={setScore} setPP={setPP} pp={pp} />
         </Canvas>
         <div className="ui-header">
              <h1>PARADA.QUEST</h1>
-             <div className="integration-bar"><div className="fill" style={{ width: `${Math.min(100, score * 3.3)}%` }}></div></div>
-             <div className="score-text">ENCLAVE_HEALED: {score}/30</div>
+             <div className="meter-label">PEACE_POINTS (PP)</div>
+             <div className="pp-bar">
+                 <div className="fill" style={{ width: `${pp}%`, backgroundColor: pp > 30 ? 'var(--pixels-green)' : '#ff0000' }}></div>
+             </div>
+             <div className="integration-bar"><div className="fill" style={{ width: `${Math.min(100, score * 4)}%` }}></div></div>
+             <div className="score-text">SIGNALS_INTEGRATED: {score}</div>
         </div>
         <div className="mobile-interface">
             <div className="virtual-joystick" ref={joystickRef} onPointerMove={handleJoystick} onPointerUp={resetJoystick} onPointerLeave={resetJoystick} onTouchMove={handleJoystick} onTouchEnd={resetJoystick}>

@@ -50,6 +50,8 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput }: any) {
   useFrame((state) => {
     if (!bodyRef.current) return;
     const keys = getKeys();
+    
+    // 1. INPUT UNIFICATION
     const moveX = (keys.right ? 1 : 0) - (keys.left ? 1 : 0) + mobileInput.current.x;
     const moveZ = (keys.backward ? 1 : 0) - (keys.forward ? 1 : 0) + mobileInput.current.y;
     const jumpInput = keys.jump || mobileInput.current.jump;
@@ -65,6 +67,7 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput }: any) {
        setTimeout(() => setIsAttacking(false), 250); 
     }
 
+    // 2. CAMERA-RELATIVE MOVEMENT
     const cameraRotation = new THREE.Euler().setFromQuaternion(camera.quaternion, 'YXZ');
     cameraRotation.x = 0; cameraRotation.z = 0;
 
@@ -82,7 +85,7 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput }: any) {
     }, true);
 
     if (jumpInput && Math.abs(linvel.y) < 0.1 && pos.y < 1.5) {
-       bodyRef.current.setLinvel({ x: linvel.x, y: 15, z: linvel.z }, true);
+       bodyRef.current.setLinvel({ x: linvel.x, y: 16, z: linvel.z }, true);
     }
 
     const t = state.clock.elapsedTime;
@@ -114,6 +117,10 @@ function KarateMan({ onAttack, playerPosRef, kickRange, mobileInput }: any) {
              <mesh position={[0, 0, (kickRange + 0.5) / 2]}>
                <boxGeometry args={[0.15, 0.15, kickRange]} />
                <meshStandardMaterial color="#ff00ff" emissive="#ff00ff" emissiveIntensity={20} transparent opacity={0.8} />
+             </mesh>
+             <mesh position={[0, 0, 0]} rotation={[Math.PI/2, 0, 0]}>
+                <ringGeometry args={[0.5, kickRange, 32]} />
+                <meshStandardMaterial color="#ff00ff" transparent opacity={0.2} />
              </mesh>
            </group>
         )}
@@ -152,20 +159,39 @@ function CameraRig({ playerPosRef, isMobile }: any) {
   const lookSmooth = useRef(new THREE.Vector3(0, 0, 0));
 
   useFrame(() => {
-    if (!playerPosRef.current || !orbitRef.current) return;
+    if (!playerPosRef.current) return;
     const pPos = playerPosRef.current;
+    
+    // Smoothly track target center
     lookSmooth.current.lerp(pPos.clone().add(new THREE.Vector3(0, 1.5, 0)), 0.1);
-    orbitRef.current.target.copy(lookSmooth.current);
-    orbitRef.current.update();
+
+    if (isMobile) {
+      if (orbitRef.current) {
+        orbitRef.current.target.copy(lookSmooth.current);
+        orbitRef.current.update();
+      }
+    } else {
+      // DESKTOP: PointerLock (Look around centered on player)
+      if (orbitRef.current) {
+         orbitRef.current.target.copy(lookSmooth.current);
+         orbitRef.current.update();
+      }
+    }
   });
 
   return (
     <>
-      {isMobile ? (
-        <OrbitControls ref={orbitRef} enablePan={false} enableZoom={true} maxPolarAngle={Math.PI / 2.2} minDistance={10} maxDistance={40} makeDefault />
-      ) : (
-        <PointerLockControls />
-      )}
+       <OrbitControls 
+            ref={orbitRef}
+            enablePan={false} 
+            enableZoom={true} 
+            maxPolarAngle={Math.PI / 2.1} 
+            minDistance={8}
+            maxDistance={35}
+            makeDefault 
+        />
+        {/* On desktop we can ALSO capture pointer while using OrbitControls for that action feel */}
+        {!isMobile && <PointerLockControls />}
     </>
   );
 }
@@ -268,7 +294,7 @@ function App() {
         {(!isLocked && !isMobile) && (
             <div className="capture-overlay" onClick={() => document.body.requestPointerLock()}>
                 <p>CLICK TO CAPTURE SIGNAL</p>
-                <span>[ DESKTOP_MODE_ACTIVE ]</span>
+                <span>[ 3RD_PERSON_ORBIT_ACTIVE ]</span>
             </div>
         )}
         
